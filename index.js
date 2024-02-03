@@ -14,9 +14,13 @@ const backendUrl = process.env.BACKEND_URL || "http://localhost:4000"; // Ajout 
 console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
 
 const corsOptions = {
-  origin: "https://main--e-commerce-fr.netlify.app", // Remplacez par l'origine que vous voulez autoriser
+  origin: [
+    "https://main--e-commerce-fr.netlify.app",
+    "https://e-commerce-fr.netlify.app",
+  ], // Ajoutez votre nouvelle origine ici
   optionsSuccessStatus: 200, // Pour les anciens navigateurs qui ne supportent pas le statut 204
 };
+
 app.use(cors(corsOptions));
 
 // Database Connection With MongoDB

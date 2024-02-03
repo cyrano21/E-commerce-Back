@@ -16,8 +16,8 @@ app.use(express.json());
 // app.use(cors());
 
 const corsOptions = {
-  origin: "https://main--e-commerce-fr.netlify.app/",
-  optionsSuccessStatus: 200,
+  origin: "https://main--e-commerce-fr.netlify.app", // Remplacez par l'origine que vous voulez autoriser
+  optionsSuccessStatus: 200, // Pour les anciens navigateurs qui ne supportent pas le statut 204
 };
 app.use(cors(corsOptions));
 

@@ -13,7 +13,13 @@ const jwtSecret = process.env.JWT_SECRET;
 console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
 
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+
+const corsOptions = {
+  origin: "https://main--e-commerce-fr.netlify.app/",
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
 
 // Database Connection With MongoDB
 

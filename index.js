@@ -9,11 +9,9 @@ const cors = require("cors");
 require("dotenv").config();
 const mongooseURL = process.env.MONGOOSE_URL;
 const jwtSecret = process.env.JWT_SECRET;
+const backendUrl = process.env.BACKEND_URL || "http://localhost:4000"; // Ajout de BACKEND_URL
 
 console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
-
-app.use(express.json());
-// app.use(cors());
 
 const corsOptions = {
   origin: "https://main--e-commerce-fr.netlify.app", // Remplacez par l'origine que vous voulez autoriser
@@ -46,6 +44,7 @@ const storage = multer.diskStorage({
     );
   },
 });
+
 const upload = multer({ storage: storage });
 app.post("/upload", upload.single("product"), (req, res) => {
   if (!req.file) {
@@ -56,7 +55,7 @@ app.post("/upload", upload.single("product"), (req, res) => {
   }
   res.json({
     success: 1,
-    image_url: `http://localhost:4000/images/${req.file.filename}`,
+    image_url: `${backendUrl}/images/${req.file.filename}`, // Utilisation de backendUrl
   });
 });
 

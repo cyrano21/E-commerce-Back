@@ -10,6 +10,8 @@ require("dotenv").config();
 const mongooseURL = process.env.MONGOOSE_URL;
 const jwtSecret = process.env.JWT_SECRET;
 
+console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
+
 app.use(express.json());
 app.use(cors());
 

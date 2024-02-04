@@ -9,7 +9,10 @@ const cors = require("cors");
 require("dotenv").config();
 const mongooseURL = process.env.MONGOOSE_URL;
 const jwtSecret = process.env.JWT_SECRET;
-const backendUrl = process.env.BACKEND_URL || "http://localhost:4000"; // Ajout de BACKEND_URL
+const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
+  
+const Product = require("./models/Product");
+
 
 console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
 
@@ -22,7 +25,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
 // Database Connection With MongoDB
 
 mongoose
@@ -101,39 +103,7 @@ const Users = mongoose.model("Users", {
   },
 });
 
-// Schema for creating Product
-const Product = mongoose.model("Product", {
-  id: {
-    type: Number,
-    required: true,
-  },
-  name: {
-    type: String,
-    required: true,
-  },
-  image: {
-    type: String,
-    required: true,
-  },
-  category: {
-    type: String,
-    required: true,
-  },
-  new_price: {
-    type: Number,
-  },
-  old_price: {
-    type: Number,
-  },
-  date: {
-    type: Date,
-    default: Date.now,
-  },
-  avilable: {
-    type: Boolean,
-    default: true,
-  },
-});
+
 
 app.get("/", (req, res) => {
   res.send("Root");
@@ -208,9 +178,18 @@ app.post("/signup", async (req, res) => {
 
 app.get("/allproducts", async (req, res) => {
   let products = await Product.find({});
+  // Remplacer les URLs localhost par l'URL de production
+  products = products.map((product) => {
+    product.image = product.image.replace(
+      "http://localhost:4000",
+      process.env.BACKEND_URL
+    );
+    return product;
+  });
   console.log("All Products");
   res.send(products);
 });
+
 
 app.get("/newcollections", async (req, res) => {
   let products = await Product.find({});

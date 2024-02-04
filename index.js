@@ -10,18 +10,14 @@ require("dotenv").config();
 const mongooseURL = process.env.MONGOOSE_URL;
 const jwtSecret = process.env.JWT_SECRET;
 const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
-  
-const Product = require("./models/Product");
 
+const Product = require("./models/Product");
 
 console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
 
 const corsOptions = {
-  origin: [
-    "https://main--e-commerce-fr.netlify.app",
-    "https://e-commerce-fr.netlify.app",
-  ], // Ajoutez votre nouvelle origine ici
-  optionsSuccessStatus: 200, // Pour les anciens navigateurs qui ne supportent pas le statut 204
+  origin: "*",
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
@@ -103,8 +99,6 @@ const Users = mongoose.model("Users", {
   },
 });
 
-
-
 app.get("/", (req, res) => {
   res.send("Root");
 });
@@ -178,18 +172,9 @@ app.post("/signup", async (req, res) => {
 
 app.get("/allproducts", async (req, res) => {
   let products = await Product.find({});
-  // Remplacer les URLs localhost par l'URL de production
-  products = products.map((product) => {
-    product.image = product.image.replace(
-      "http://localhost:4000",
-      process.env.BACKEND_URL
-    );
-    return product;
-  });
   console.log("All Products");
   res.send(products);
 });
-
 
 app.get("/newcollections", async (req, res) => {
   let products = await Product.find({});

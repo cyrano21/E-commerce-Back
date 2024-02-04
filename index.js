@@ -16,7 +16,7 @@ const Product = require("./models/Product");
 console.log(process.env.PORT, process.env.MONGOOSE_URL, process.env.JWT_SECRET);
 
 const corsOptions = {
-  origin: "*",
+  origin: ["*", "https://main--mu-commerce-admin.netlify.app"],
   optionsSuccessStatus: 200,
 };
 

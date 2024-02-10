@@ -84,19 +84,13 @@ function normalizeCategory(category) {
 // Exemple d'utilisation dans l'API /allproducts
 app.get("/allproducts", async (req, res) => {
   try {
-    let products = await Product.find({});
-    // Normaliser la catégorie de chaque produit
-    products = products.map((product) => ({
-      ...product.toObject(),
-      category: normalizeCategory(product.category),
-    }));
-    res.json(products);
+    const products = await Product.find({});
+    res.json(products); // Retourne tous les produits sans modification
   } catch (error) {
     console.error("Error fetching all products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
-
 app.post("/upload", upload.single("picture"), async (req, res) => {
   function formatCategory(category) {
     if (!category) return "defaultCategory"; // Si la catégorie n'est pas fournie, utilisez une valeur par défaut

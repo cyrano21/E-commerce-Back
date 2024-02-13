@@ -3,6 +3,8 @@ const express = require("express");
 const app = express();
 const jwt = require("jsonwebtoken");
 
+const fetchuser = require("./middlewares/fetchuser");
+
 //const fileUpload = require("express-fileupload");
 const cors = require("cors");
 const cloudinary = require("cloudinary").v2;
@@ -34,15 +36,43 @@ const mongoose = require("mongoose");
 const mongooseURL = process.env.MONGOOSE_URL;
 
 const productSchema = new mongoose.Schema({
-  id: Number,
+  id: Number, // MongoDB crée automatiquement un champ _id, donc ce champ pourrait être redondant sauf si vous avez besoin d'un ID spécifique à l'application en plus de l'_id MongoDB.
   name: String,
   image: String,
   category: String,
   new_price: Number,
   old_price: Number,
+  timesPurchased: { type: Number, default: 0 },
+  sales: [
+    // Ce champ semble indiquer que vous envisagez de stocker les ventes directement dans le document du produit. Cela peut ne pas être optimal pour les requêtes d'agrégation et la scalabilité.
+    {
+      quantitySold: Number,
+      saleDate: Date,
+    },
+  ],
 });
 
 const Product = mongoose.model("Product", productSchema);
+
+const saleSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  quantity: Number,
+  price: Number,
+  date: { type: Date, default: Date.now },
+  timesPurchased: { type: Number, default: 0 },
+  stock: { type: Number, default: 0 }, // Si vous souhaitez suivre le stock
+});
+
+const Sale = mongoose.model("Sale", saleSchema);
 
 mongoose
   .connect(mongooseURL, {
@@ -136,19 +166,6 @@ app.post("/upload", upload.single("picture"), async (req, res) => {
 //app.use("/images", express.static("upload/images"));
 
 // MiddleWare to fetch user from database
-const fetchuser = async (req, res, next) => {
-  const token = req.header("auth-token");
-  if (!token) {
-    res.status(401).send({ errors: "Please authenticate using a valid token" });
-  }
-  try {
-    const data = jwt.verify(token, jwtSecret);
-    req.user = data.user;
-    next();
-  } catch (error) {
-    res.status(401).send({ errors: "Please authenticate using a valid token" });
-  }
-};
 
 // Schema for creating user model
 const Users = mongoose.model("Users", {
@@ -179,8 +196,10 @@ app.get("/", (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     let success = false;
-    let user = await Users.findOne({ email: req.body.email });
+    const user = await Users.findOne({ email: req.body.email });
     if (user) {
+      // Ici, vous devriez utiliser une méthode de comparaison plus sécurisée pour les mots de passe
+      // Par exemple, si vous avez hashé le mot de passe lors de l'enregistrement, utilisez bcrypt.compare
       const passCompare = req.body.password === user.password;
       if (passCompare) {
         const data = {
@@ -190,17 +209,18 @@ app.post("/login", async (req, res) => {
         };
         success = true;
         const token = jwt.sign(data, jwtSecret);
+        // Envoyez simplement le token au client
         res.json({ success, token });
       } else {
         return res.status(400).json({
-          success: success,
-          errors: "please try with correct email/password",
+          success,
+          errors: "Please try with correct email/password",
         });
       }
     } else {
       return res.status(400).json({
-        success: success,
-        errors: "please try with correct email/password",
+        success,
+        errors: "Please try with correct email/password",
       });
     }
   } catch (error) {
@@ -288,11 +308,107 @@ app.get("/newcollections", async (req, res) => {
   res.send(arr);
 });
 
-app.get("/popularinwomen", async (req, res) => {
-  let products = await Product.find({});
-  let arr = products.splice(0, 4);
-  console.log("Popular In Women");
-  res.send(arr);
+app.get("/popularproducts", async (req, res) => {
+  console.log(req.query);
+
+  try {
+    const popularProducts = await Product.find({})
+      .sort({ timesPurchased: -1 }) // Trie les produits par popularité décroissante
+      .limit(5); // Limite les résultats aux 10 premiers produits
+
+    res.json(popularProducts);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération des produits populaires:",
+      error,
+    );
+    res.status(500).send({ error: "Erreur interne du serveur" });
+  }
+});
+
+app.post("/recordSale", async (req, res) => {
+  try {
+    const { productId, quantity, price } = req.body;
+    const userId = req.user.id; // Supposant que vous avez déjà un middleware d'authentification
+
+    // Vérification de l'existence du produit
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).send({ error: "Produit non trouvé" });
+    }
+
+    // Création d'une nouvelle vente
+    const newSale = new Sale({
+      userId,
+      productId,
+      quantity,
+      price,
+      date: new Date(),
+    });
+
+    await newSale.save();
+
+    // Mise à jour de la popularité et du stock du produit
+    await Product.findByIdAndUpdate(productId, {
+      $inc: {
+        timesPurchased: quantity, // Incrémenter le compteur de popularité
+        stock: -quantity, // Décrémenter le stock si vous gérez cette information
+      },
+    });
+
+    res.status(201).json({ message: "Vente enregistrée avec succès" });
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de la vente :", error);
+    res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+const token = localStorage.getItem("token");
+
+app.post("/completepurchase", fetchuser, async (req, res) => {
+  try {
+    const userId = req.user.id; // L'ID de l'utilisateur est extrait grâce au middleware 'fetchuser'.
+    const { items } = req.body; // Récupérer les articles du corps de la requête.
+
+    // Boucle sur chaque article acheté pour enregistrer la vente.
+    await Promise.all(
+      items.map(async (item) => {
+        const { productId, quantity, price } = item;
+
+        // Trouver le produit avant d'essayer de l'enregistrer comme vendu
+        const product = await Product.findById(productId);
+        if (!product) {
+          throw new Error("Produit non trouvé");
+        }
+
+        // Création d'une nouvelle vente
+        const newSale = new Sale({
+          userId,
+          productId,
+          quantity,
+          price,
+          date: new Date(),
+        });
+
+        // Optionnel: Mettre à jour le stock du produit
+        product.stock = product.stock - quantity; // Assurez-vous d'avoir un champ `stock` dans votre schéma de produit
+        await product.save();
+
+        // Enregistrer la vente
+        await newSale.save();
+      }),
+    );
+
+    // Réponse en cas de succès de la procédure.
+    res.json({ success: true, message: "Achat complété avec succès." });
+  } catch (error) {
+    console.error("Erreur lors de la finalisation de l'achat:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Erreur lors de la finalisation de l'achat.",
+      error: error.message,
+    });
+  }
 });
 
 //Create an endpoint for saving the product in cart

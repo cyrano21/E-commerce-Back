@@ -1,37 +1,20 @@
-// Schema for creating Product
-
 const mongoose = require("mongoose");
-const Product = mongoose.model("Product", {
-  id: {
-    type: Number,
-    required: true,
-  },
-  name: {
-    type: String,
-    required: true,
-  },
-  image: {
-    type: String,
-    required: true,
-  },
-  category: {
-    type: String,
-    required: true,
-  },
-  new_price: {
-    type: Number,
-  },
-  old_price: {
-    type: Number,
-  },
-  date: {
-    type: Date,
-    default: Date.now,
-  },
-  avilable: {
-    type: Boolean,
-    default: true,
-  },
+
+const productSchema = new mongoose.Schema({
+  name: String,
+  image: String,
+  category: String,
+  new_price: Number,
+  old_price: Number,
+  timesPurchased: { type: Number, default: 0 },
+  sales: [
+    {
+      quantitySold: Number,
+      saleDate: Date,
+    },
+  ],
 });
+
+const Product = mongoose.model("Product", productSchema);
 
 module.exports = Product;

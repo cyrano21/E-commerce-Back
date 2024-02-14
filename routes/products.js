@@ -8,33 +8,22 @@ const router = express.Router();
 //const Sale = require("../models/Sale");
 
 function normalizeCategory(category) {
-  const mapping = {
-    MEN: "Men",
-    WOMEN: "Women",
-    KID: "Kid",
-  };
-  return mapping[category.toUpperCase()] || category; // Retourne la catégorie normalisée ou la catégorie originale si non trouvée
+  const mapping = { MEN: "Men", WOMEN: "Women", KID: "Kid" };
+  return mapping[category.toUpperCase()] || category;
 }
 
 router.post("/addproduct", async (req, res) => {
-  // Ajoutez cette route à votre backend (app.js ou index.js) pour enregistrer un nouveau produit dans la base de données MongoDB à partir des données reçues du formulaire.
   try {
     const { name, category, new_price, old_price, image } = req.body;
-
-    // Création d'une nouvelle instance du modèle Product sans fournir un `id`
     const product = new Product({
       name,
-      image, // Supposant que 'image' est bien l'URL retournée par Cloudinary
-      category,
+      image,
+      category: normalizeCategory(category),
       new_price,
       old_price,
     });
-
     await product.save();
-
-    console.log("product>>>>", product);
-
-    res.json({ success: true, product: product });
+    res.json({ success: true, product });
   } catch (error) {
     console.error("Error saving product:", error);
     res.status(500).send("Internal Server Error");
@@ -84,9 +73,13 @@ router.post("/upload", upload.single("picture"), async (req, res) => {
 });
 
 router.get("/allproducts", async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const products = await Product.find({});
-    res.json(products); // Retourne tous les produits sans modification
+    const products = await Product.find({})
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+    res.json(products);
   } catch (error) {
     console.error("Error fetching all products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });

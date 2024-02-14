@@ -431,7 +431,17 @@ app.post("/recordSale", async (req, res) => {
   }
 });
 
-const token = localStorage.getItem("token");
+app.get("/getuser", fetchuser, async (req, res) => {
+  //fetchuser is a middleware to get the user from the token
+  try {
+    const userId = req.user.id;
+    let user = await Users.findOne({ _id: userId }); //find the user from the database using the id
+    res.json({ user }); //send the user data
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
 
 app.post("/completepurchase", fetchuser, async (req, res) => {
   try {

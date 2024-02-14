@@ -9,6 +9,8 @@ const app = express();
 connectDB(); // Initialise la connexion à la base de données
 
 app.use(express.json());
+app.set("trust proxy", true);
+
 app.use(cors({ origin: true, credentials: true }));
 
 const userRoutes = require("./routes/users");

@@ -1,9 +1,9 @@
-// server.js
+// index.js
 const express = require("express");
+require("dotenv").config();
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
-require("dotenv").config();
 
 const app = express();
 connectDB(); // Initialise la connexion à la base de données
@@ -14,6 +14,7 @@ app.use(cors({ origin: true, credentials: true }));
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
+
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
 app.use("/sales", salesRoutes);

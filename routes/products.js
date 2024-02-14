@@ -1,11 +1,11 @@
 const express = require("express");
 const multer = require("multer");
-const Product = require("../models/product");
+const Product = require("../models/Product");
 const { cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
 const upload = multer({ dest: "uploads/" });
 const router = express.Router();
-const User = require("../models/User");
-const Sale = require("../models/Sale");
+//const User = require("../models/User");
+//const Sale = require("../models/Sale");
 
 function normalizeCategory(category) {
   const mapping = {

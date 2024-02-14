@@ -2,10 +2,9 @@ const port = process.env.PORT || 4000;
 const express = require("express");
 const app = express();
 const jwt = require("jsonwebtoken");
-
+const bcrypt = require("bcryptjs");
 const fetchuser = require("./middlewares/fetchuser");
 
-//const fileUpload = require("express-fileupload");
 const cors = require("cors");
 const cloudinary = require("cloudinary").v2;
 
@@ -15,7 +14,31 @@ const upload = multer({ dest: "uploads/" });
 require("dotenv").config();
 
 app.use(express.json());
-app.use(cors());
+
+const allowedOrigins = [
+  "https://e-commerce-fr.netlify.app",
+  "https://mu-commerce-admin.netlify.app",
+];
+
+const corsOptionsDelegate = function (req, callback) {
+  let corsOptions;
+  if (allowedOrigins.includes(req.header("Origin"))) {
+    corsOptions = { origin: true, credentials: true }; // Reflect (enable) the requested origin in the CORS response
+  } else {
+    corsOptions = { origin: false }; // Disable CORS for this request
+  }
+  callback(null, corsOptions); // callback expects two parameters: error and options
+};
+
+app.use(cors(corsOptionsDelegate));
+
+app.use(function (req, res, next) {
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+  next();
+});
 
 const rateLimit = require("express-rate-limit");
 
@@ -26,8 +49,6 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-//app.use(fileUpload());
-
 const jwtSecret = process.env.JWT_SECRET;
 const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
 
@@ -36,7 +57,6 @@ const mongoose = require("mongoose");
 const mongooseURL = process.env.MONGOOSE_URL;
 
 const productSchema = new mongoose.Schema({
-  id: Number, // MongoDB crée automatiquement un champ _id, donc ce champ pourrait être redondant sauf si vous avez besoin d'un ID spécifique à l'application en plus de l'_id MongoDB.
   name: String,
   image: String,
   category: String,
@@ -111,7 +131,17 @@ function normalizeCategory(category) {
   return mapping[category.toUpperCase()] || category; // Retourne la catégorie normalisée ou la catégorie originale si non trouvée
 }
 
-// Exemple d'utilisation dans l'API /allproducts
+app.get("/category/:category", async (req, res) => {
+  try {
+    const category = normalizeCategory(req.params.category);
+    const products = await Product.find({ category }); // Récupère tous les produits de la catégorie spécifiée
+
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching category products:", error);
+  }
+});
+
 app.get("/allproducts", async (req, res) => {
   try {
     const products = await Product.find({});
@@ -163,9 +193,30 @@ app.post("/upload", upload.single("picture"), async (req, res) => {
   }
 });
 
-//app.use("/images", express.static("upload/images"));
+app.post("/uploadproduct", async (req, res) => {
+  // Ajoutez cette route à votre backend (app.js ou index.js) pour enregistrer un nouveau produit dans la base de données MongoDB à partir des données reçues du formulaire.
+  try {
+    const { name, category, new_price, old_price, image } = req.body;
 
-// MiddleWare to fetch user from database
+    // Création d'une nouvelle instance du modèle Product sans fournir un `id`
+    const product = new Product({
+      name,
+      image, // Supposant que 'image' est bien l'URL retournée par Cloudinary
+      category,
+      new_price,
+      old_price,
+    });
+
+    await product.save();
+
+    console.log("product>>>>", product);
+
+    res.json({ success: true, product: product });
+  } catch (error) {
+    console.error("Error saving product:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 // Schema for creating user model
 const Users = mongoose.model("Users", {
@@ -192,45 +243,46 @@ app.get("/", (req, res) => {
   res.send("Welcome in your shop");
 });
 
-//Create an endpoint at ip/login for login the user and giving auth-token
 app.post("/login", async (req, res) => {
   try {
     let success = false;
-    const user = await Users.findOne({ email: req.body.email });
-    if (user) {
-      // Ici, vous devriez utiliser une méthode de comparaison plus sécurisée pour les mots de passe
-      // Par exemple, si vous avez hashé le mot de passe lors de l'enregistrement, utilisez bcrypt.compare
-      const passCompare = req.body.password === user.password;
-      if (passCompare) {
-        const data = {
-          user: {
-            id: user.id,
-          },
-        };
-        success = true;
-        const token = jwt.sign(data, jwtSecret);
-        // Envoyez simplement le token au client
-        res.json({ success, token });
-      } else {
-        return res.status(400).json({
-          success,
-          errors: "Please try with correct email/password",
-        });
-      }
-    } else {
+    let user = await Users.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(400).json({ success, errors: "Invalid Credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(req.body.password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ errors: "Invalid Credentials" });
+    }
+
+    const data = {
+      user: {
+        id: user.id,
+      },
+    };
+    const token = jwt.sign(data, jwtSecret);
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: true, // Set to true if using https
+        sameSite: "strict",
+      })
+      .json({ success: true, token });
+  } catch (error) {
+    console.error(error);
+    {
       return res.status(400).json({
         success,
         errors: "Please try with correct email/password",
       });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Internal Server Error");
   }
 });
 
 const Joi = require("joi");
-//Create an endpoint at ip/auth for regestring the user in data base & sending token
+
 app.post("/signup", async (req, res) => {
   const schema = Joi.object({
     username: Joi.string().alphanum().min(3).max(30).required(),
@@ -257,10 +309,22 @@ app.post("/signup", async (req, res) => {
   for (let i = 0; i < 300; i++) {
     cart[i] = 0;
   }
-  const user = new Users({
+
+  let user = await Users.findOne({ email: req.body.email });
+  if (user) {
+    return res.status(400).json({
+      success: false,
+      errors: "existing user found with this email",
+    });
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+  user = new Users({
     name: req.body.username,
     email: req.body.email,
-    password: req.body.password,
+    password: hashedPassword,
     cartData: cart,
   });
   await user.save();
@@ -272,10 +336,14 @@ app.post("/signup", async (req, res) => {
 
   const token = jwt.sign(data, jwtSecret);
   success = true;
-  res.json({ success, token });
+  res
+    .cookie("token", token, {
+      httpOnly: true,
+      secure: true, // Set to true if using https
+      sameSite: "strict",
+    })
+    .json({ success: true, token });
 });
-
-// Assurez-vous que multer est configuré pour gérer les téléchargements de fichiers.
 
 app.post("/addproduct", async (req, res) => {
   try {

@@ -9,7 +9,7 @@ const app = express();
 connectDB(); // Initialise la connexion à la base de données
 
 app.use(express.json());
-
+app.set("trust proxy", 1);
 app.use(cors({ origin: true, credentials: true }));
 
 const userRoutes = require("./routes/users");
@@ -27,6 +27,11 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.get("/", (req, res) => res.send("Welcome to the API"));
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something broke!");
+});
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Server running on port ${port}`));

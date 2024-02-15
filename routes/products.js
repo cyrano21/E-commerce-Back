@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const Product = require("../models/product");
+const Product = require("../models/Product");
 const { cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
 const upload = multer({ dest: "uploads/" });
 const router = express.Router();

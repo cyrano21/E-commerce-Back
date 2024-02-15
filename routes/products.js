@@ -85,6 +85,8 @@ router.post("/upload", upload.single("picture"), async (req, res) => {
 });
 
 router.get("/allproducts", async (req, res) => {
+  console.log("Route /allproducts hit");
+
   try {
     const products = await Product.find({});
     res.json(products); // Retourne tous les produits sans modification

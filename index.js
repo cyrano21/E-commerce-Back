@@ -10,11 +10,24 @@ connectDB(); // Initialise la connexion à la base de données
 
 app.use(express.json());
 app.set("trust proxy", 1);
-app.use(cors({ origin: true, credentials: true }));
+
+const corsOptions = {
+  origin: [
+    "https://main--mu-commerce-admin.netlify.app",
+    "https://e-commerce-fr.netlify.app",
+  ],
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
+
+const popularProductsRoute = require("./routes/popularProducts"); // Assurez-vous que le chemin est correct
+app.use("/", popularProductsRoute);
 
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);

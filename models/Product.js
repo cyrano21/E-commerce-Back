@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema({
-  name: { type: String, required: true, index: true }, // Ajout de l'index
+  name: String,
   image: String,
-  category: { type: String, required: true, index: true }, // Ajout de l'index
+  category: String,
   new_price: Number,
   old_price: Number,
   timesPurchased: { type: Number, default: 0 },

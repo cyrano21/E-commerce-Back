@@ -4,6 +4,8 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
 const app = express();
+const Product = require("./models/Product");
+
 app.use(express.json());
 //app.use(cors());
 app.set("trust proxy", 1);
@@ -31,7 +33,7 @@ connectDB();
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
-const Product = require("./models/Product");
+//const Product = require("./models/Product");
 app.use("./users", userRoutes);
 app.use("./products", productRoutes);
 app.use("./sales", salesRoutes);
@@ -43,6 +45,51 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.get("/", (req, res) => res.send("Welcome to the API"));
+
+app.get("/allproducts", async (req, res) => {
+  try {
+    // Paramètres de pagination avec des valeurs par défaut
+    let { page = 1, limit = 10 } = req.query;
+
+    // Conversion des paramètres de pagination en nombres
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // Construction d'un objet de requête pour le filtrage.
+    // Vous pouvez ajouter autant de champs que vous voulez filtrer
+    const query = {};
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+    if (req.query.minPrice) {
+      query.new_price = { $gte: parseFloat(req.query.minPrice) };
+    }
+    if (req.query.maxPrice) {
+      query.new_price = {
+        ...query.new_price,
+        $lte: parseFloat(req.query.maxPrice),
+      };
+    }
+
+    // Trouver les produits correspondant au filtre, paginer les résultats
+    const products = await Product.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Compter le total des documents pour le calcul des pages
+    const total = await Product.countDocuments(query);
+
+    res.json({
+      totalProducts: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching all products:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

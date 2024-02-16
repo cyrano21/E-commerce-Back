@@ -3,17 +3,16 @@ require("dotenv").config();
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
-
+const cloudinary = require("cloudinary").v2;
 const app = express();
+const backendUrl = process.env.BACKEND_URL;
 
 app.use(express.json());
+//app.use(cors());
 app.set("trust proxy", 1);
 
 const corsOptions = {
-  origin: [
-    "https://main--mu-commerce-admin.netlify.app",
-    "https://e-commerce-fr.netlify.app",
-  ],
+  origin: ["http://localhost:3001", backendUrl],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };
@@ -25,6 +24,9 @@ app.use(function (req, res, next) {
     "Access-Control-Allow-Origin",
     "https://main--mu-commerce-admin.netlify.app",
     "https://e-commerce-fr.netlify.app",
+    "http://localhost:3001",
+    "http://localhost:3000",
+    backendUrl,
   );
   res.header(
     "Access-Control-Allow-Headers",
@@ -35,6 +37,12 @@ app.use(function (req, res, next) {
 });
 
 connectDB();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");

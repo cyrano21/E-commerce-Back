@@ -1,12 +1,23 @@
 const express = require("express");
-const multer = require("multer");
 const Product = require("../models/Product");
-const { cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
-const upload = multer({ dest: "uploads/" });
+//const {cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
+const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
+
+// Configuration de Multer pour le stockage des images téléchargées
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/"); // Chemin du dossier où les images seront sauvegardées temporairement
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname); // Nom du fichier pour éviter les conflits
+  },
+});
+
+const upload = multer({ storage: storage });
 const router = express.Router();
-const User = require("../models/User");
-const Sale = require("../models/Sale");
-const fetchuser = require("../middlewares/fetchuser");
+//const User = require("../models/User");
+//const Sale = require("../models/Sale");
 
 function normalizeCategory(category) {
   const mapping = {
@@ -17,27 +28,33 @@ function normalizeCategory(category) {
   return mapping[category.toUpperCase()] || category; // Retourne la catégorie normalisée ou la catégorie originale si non trouvée
 }
 
-router.post("/addproduct", async (req, res) => {
-  // Ajoutez cette route à votre backend (app.js ou index.js) pour enregistrer un nouveau produit dans la base de données MongoDB à partir des données reçues du formulaire.
+router.post("/addproduct", upload.single("image"), async (req, res) => {
   try {
-    const { name, category, new_price, old_price, image } = req.body;
+    let imageUrl = ""; // Initialisation de la variable pour stocker l'URL de l'image
 
-    // Création d'une nouvelle instance du modèle Product sans fournir un `id`
+    // Si une image est téléchargée, la charger sur Cloudinary
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = result.secure_url; // Récupération de l'URL sécurisée de l'image
+    }
+
+    const { name, category, new_price, old_price } = req.body;
+
+    // Création d'une nouvelle instance du modèle Product
     const product = new Product({
       name,
-      image, // Supposant que 'image' est bien l'URL retournée par Cloudinary
-      category,
+      image: imageUrl, // Utilisation de l'URL retournée par Cloudinary
+      category: normalizeCategory(category),
       new_price,
       old_price,
     });
 
-    await product.save();
+    await product.save(); // Sauvegarde du produit dans la base de données
 
-    console.log("product>>>>", product);
-
+    console.log("Produit ajouté avec succès:", product);
     res.json({ success: true, product: product });
   } catch (error) {
-    console.error("Error saving product:", error);
+    console.error("Erreur lors de l'ajout du produit:", error);
     res.status(500).send("Internal Server Error");
   }
 });
@@ -85,24 +102,47 @@ router.post("/upload", upload.single("picture"), async (req, res) => {
 });
 
 router.get("/allproducts", async (req, res) => {
-  console.log("Route /allproducts hit");
-
   try {
-    const products = await Product.find({});
-    res.json(products); // Retourne tous les produits sans modification
+    // Paramètres de pagination avec des valeurs par défaut
+    let { page = 1, limit = 10 } = req.query;
+
+    // Conversion des paramètres de pagination en nombres
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // Construction d'un objet de requête pour le filtrage.
+    // Vous pouvez ajouter autant de champs que vous voulez filtrer
+    const query = {};
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+    if (req.query.minPrice) {
+      query.new_price = { $gte: parseFloat(req.query.minPrice) };
+    }
+    if (req.query.maxPrice) {
+      query.new_price = {
+        ...query.new_price,
+        $lte: parseFloat(req.query.maxPrice),
+      };
+    }
+
+    // Trouver les produits correspondant au filtre, paginer les résultats
+    const products = await Product.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Compter le total des documents pour le calcul des pages
+    const total = await Product.countDocuments(query);
+
+    res.json({
+      totalProducts: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      products,
+    });
   } catch (error) {
     console.error("Error fetching all products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-});
-router.get("/category/:category", async (req, res) => {
-  try {
-    const category = normalizeCategory(req.params.category);
-    const products = await Product.find({ category }); // Récupère tous les produits de la catégorie spécifiée
-
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching category products:", error);
   }
 });
 

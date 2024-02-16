@@ -1,7 +1,6 @@
 const express = require("express");
 const Product = require("../models/Product");
-//const {cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
-const cloudinary = require("cloudinary").v2;
+const { cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
 const multer = require("multer");
 const router = express.Router();
 

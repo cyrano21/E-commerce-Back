@@ -5,7 +5,6 @@ const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
 
 const app = express();
-connectDB();
 
 app.use(express.json());
 app.set("trust proxy", 1);
@@ -21,10 +20,25 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+app.use(function (req, res, next) {
+  res.header(
+    "Access-Control-Allow-Origin",
+    "https://main--mu-commerce-admin.netlify.app",
+    "https://e-commerce-fr.netlify.app",
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
+connectDB();
+
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
-
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
 app.use("/sales", salesRoutes);

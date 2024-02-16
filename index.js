@@ -12,7 +12,11 @@ app.use(express.json());
 app.set("trust proxy", 1);
 
 const corsOptions = {
-  origin: ["http://localhost:3001", backendUrl],
+  origin: [
+    "http://localhost:3001",
+    "https://main--mu-commerce-admin.netlify.app",
+    "https://e-commerce-fr.netlify.app",
+  ],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };

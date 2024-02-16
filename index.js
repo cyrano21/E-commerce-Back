@@ -3,10 +3,8 @@ require("dotenv").config();
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
+const multer = require("multer");
 const app = express();
-const Product = require("./models/Product");
-
-const { cloudinary } = require("./cloudinaryConfig");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -17,6 +15,10 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage: storage });
+
+const Product = require("./models/Product");
+
+const { cloudinary } = require("./cloudinaryConfig");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -64,7 +66,7 @@ connectDB();
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
-const multer = require("multer");
+
 //const Product = require("./models/Product");
 app.use("./users", userRoutes);
 app.use("./products", productRoutes);

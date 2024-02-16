@@ -9,10 +9,7 @@ app.use(express.json());
 app.set("trust proxy", 1);
 
 const corsOptions = {
-  origin: [
-    "https://mu-commerce-admin.netlify.app",
-    "https://e-commerce-fr.netlify.app",
-  ],
+  origin: ["https://mu-commerce-admin.netlify.app"],
   credentials: true, // Pour autoriser l'envoi de cookies et d'entêtes d'authentification
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
 };

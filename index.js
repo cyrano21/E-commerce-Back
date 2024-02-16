@@ -9,29 +9,29 @@ app.use(express.json());
 //app.use(cors());
 app.set("trust proxy", 1);
 
-const corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    "https://main--mu-commerce-admin.netlify.app",
-  ],
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-};
+app.use(
+  cors({
+    origin: [
+      "https://mu-commerce-admin.netlify.app",
+      "https://another-origin.com",
+    ],
+    credentials: true, // Pour les requêtes avec des cookies / authentification
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  }),
+);
 
-app.use(cors(corsOptions));
-
-app.use(function (req, res, next) {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "https://main--mu-commerce-admin.netlify.app",
-  );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
-  );
-  res.header("Access-Control-Allow-Credentials", "true");
-  next();
-});
+//app.use(function (req, res, next) {
+//  res.header(
+//    "Access-Control-Allow-Origin",
+//   "https://main--mu-commerce-admin.netlify.app",
+// );
+// res.header(
+//   "Access-Control-Allow-Headers",
+//   "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+//  );
+// res.header("Access-Control-Allow-Credentials", "true");
+//  next();
+//});
 
 connectDB();
 

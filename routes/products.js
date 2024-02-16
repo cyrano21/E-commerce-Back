@@ -58,7 +58,7 @@ router.post("/addproduct", upload.single("image"), async (req, res) => {
   }
 });
 
-router.post("/upload", upload.single("picture"), async (req, res) => {
+router.post("/upload", upload.single("image"), async (req, res) => {
   function formatCategory(category) {
     if (!category) return "defaultCategory"; // Si la catégorie n'est pas fournie, utilisez une valeur par défaut
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();

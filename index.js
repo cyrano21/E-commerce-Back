@@ -18,6 +18,14 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Users = require("./models/User"); // Assurez-vous que le chemin est correct
+const { jwtSecret } = require("./config");
+
+const Joi = require("joi");
+const fetchuser = require("./middlewares/fetchuser");
+
 function normalizeCategory(category) {
   const mapping = {
     MEN: "Men",
@@ -233,11 +241,6 @@ app.post("/removeproduct", async (req, res) => {
 
 //User routes
 
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const Users = require("./models/User"); // Assurez-vous que le chemin est correct
-const { jwtSecret } = require("./config");
-
 app.post("/login", async (req, res) => {
   try {
     let success = false;
@@ -275,9 +278,6 @@ app.post("/login", async (req, res) => {
     }
   }
 });
-
-const Joi = require("joi");
-const fetchuser = require("./middlewares/fetchuser");
 
 app.post("/signup", async (req, res) => {
   const userSchema = Joi.object({

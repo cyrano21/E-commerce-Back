@@ -1,9 +1,9 @@
 const express = require("express");
-const router = express.Router(); // Correct way to initialize router
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Users = require("../models/User"); // Assurez-vous que le chemin est correct
 const { jwtSecret } = require("../config");
+const router = express.Router(); // Correct way to initialize router
 
 router.post("/login", async (req, res) => {
   try {

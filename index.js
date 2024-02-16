@@ -1,4 +1,3 @@
-// index.js
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
@@ -6,7 +5,7 @@ const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
 
 const app = express();
-connectDB(); // Initialise la connexion à la base de données
+connectDB();
 
 app.use(express.json());
 app.set("trust proxy", 1);
@@ -25,9 +24,6 @@ app.use(cors(corsOptions));
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
-
-const popularProductsRoute = require("./routes/popularProducts"); // Assurez-vous que le chemin est correct
-app.use("/", popularProductsRoute);
 
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);

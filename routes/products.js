@@ -3,7 +3,7 @@ const Product = require("../models/Product");
 //const {cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
-const { router } = require("express");
+const router = express.Router();
 
 // Configuration de Multer pour le stockage des images téléchargées
 const storage = multer.diskStorage({

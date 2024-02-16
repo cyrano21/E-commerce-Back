@@ -1,8 +1,10 @@
+const express = require("express");
 const fetchuser = require("../middlewares/fetchuser");
 const Product = require("../models/Product");
 const Users = require("../models/User");
 const Sale = require("../models/Sale");
-const { router } = require("express");
+
+const router = express.Router();
 
 router.post("/recordSale", async (req, res) => {
   try {

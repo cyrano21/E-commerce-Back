@@ -1,20 +1,20 @@
+<<<<<<< HEAD
 const port = process.env.PORT || 4000;
 const asyncHandler = require("express-async-handler");
+=======
+>>>>>>> 21f8e38ccee97614dfc1c402abc52e7a49f513f7
 const express = require("express");
-const app = express();
-const jwt = require("jsonwebtoken");
-
-//const fileUpload = require("express-fileupload");
-const cors = require("cors");
-const cloudinary = require("cloudinary").v2;
-
-const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
-
 require("dotenv").config();
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const connectDB = require("./db");
+const cloudinary = require("cloudinary").v2;
+const app = express();
+const backendUrl = process.env.BACKEND_URL;
 
 app.use(express.json());
 //app.use(cors());
+<<<<<<< HEAD
 
 const corsOptions = {
   origin: "https://mu-commerce-admin.netlify.app",
@@ -36,16 +36,65 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Credentials", "true");
   next();
 });
+=======
+app.set("trust proxy", 1);
+>>>>>>> 21f8e38ccee97614dfc1c402abc52e7a49f513f7
 
-const rateLimit = require("express-rate-limit");
+const corsOptions = {
+  origin: [
+    "http://localhost:3001",
+    "https://main--mu-commerce-admin.netlify.app",
+    "https://e-commerce-fr.netlify.app",
+  ],
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+app.use(function (req, res, next) {
+  res.header(
+    "Access-Control-Allow-Origin",
+    "https://main--mu-commerce-admin.netlify.app",
+    "https://e-commerce-fr.netlify.app",
+    "http://localhost:3001",
+    "http://localhost:3000",
+    backendUrl,
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
+
+connectDB();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+
+const userRoutes = require("./routes/users");
+const productRoutes = require("./routes/products");
+const salesRoutes = require("./routes/sales");
+app.use("/users", userRoutes);
+app.use("/products", productRoutes);
+app.use("/sales", salesRoutes);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
+<<<<<<< HEAD
   max: 100, // augmenter la limite pendant le développement
+=======
+  max: 100, // Limite chaque IP à 100 requêtes par `window` (ici, 15 minutes)
+>>>>>>> 21f8e38ccee97614dfc1c402abc52e7a49f513f7
 });
-
 app.use(limiter);
 
+<<<<<<< HEAD
 //app.use(fileUpload());
 
 const jwtSecret = process.env.JWT_SECRET;
@@ -368,6 +417,9 @@ app.post("/removeproduct", async (req, res) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
+=======
+app.get("/", (req, res) => res.send("Welcome to the API"));
+>>>>>>> 21f8e38ccee97614dfc1c402abc52e7a49f513f7
 
 app.use((err, req, res, next) => {
   console.error(err); // Pour le débogage
@@ -377,7 +429,5 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({ message });
 });
 
-app.listen(port, (error) => {
-  if (!error) console.log("Server Running on port " + port);
-  else console.log("Error : ", error);
-});
+const port = process.env.PORT || 4000;
+app.listen(port, () => console.log(`Server running on port ${port}`));

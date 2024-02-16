@@ -1,4 +1,5 @@
 const port = process.env.PORT || 4000;
+const asyncHandler = require("express-async-handler");
 const express = require("express");
 const app = express();
 const jwt = require("jsonwebtoken");
@@ -16,18 +17,31 @@ app.use(express.json());
 //app.use(cors());
 
 const corsOptions = {
-  origin: "mu-commerce-admin.netlify.app",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  origin: "https://mu-commerce-admin.netlify.app",
   credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
 };
 
 app.use(cors(corsOptions));
+
+app.use(function (req, res, next) {
+  res.header(
+    "Access-Control-Allow-Origin",
+    "https://mu-commerce-admin.netlify.app",
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
 const rateLimit = require("express-rate-limit");
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // augmenter la limite pendant le développement
+  max: 100, // augmenter la limite pendant le développement
 });
 
 app.use(limiter);
@@ -53,26 +67,15 @@ const productSchema = new mongoose.Schema({
 const Product = mongoose.model("Product", productSchema);
 
 mongoose
-  .connect(mongooseURL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((err) => {
-    console.error("Error connecting to MongoDB", err);
-  });
+  .connect(process.env.MONGOOSE_URL)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("Error connecting to MongoDB", err));
 
 // Configuration de Cloudinary avec vos informations d'authentification
-const cloud_name = process.env.CLOUD_NAME;
-const api_key = process.env.CLOUD_API_KEY;
-const api_secret = process.env.CLOUD_API_SECRET;
-
 cloudinary.config({
-  cloud_name,
-  api_key,
-  api_secret,
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
   secure: true,
   debug: true, // Active le logging détaillé
 });
@@ -90,15 +93,19 @@ function normalizeCategory(category) {
 }
 
 // Exemple d'utilisation dans l'API /allproducts
-app.get("/allproducts", async (req, res) => {
-  try {
+app.get(
+  "/allproducts",
+  asyncHandler(async (req, res) => {
     const products = await Product.find({});
-    res.json(products); // Retourne tous les produits sans modification
-  } catch (error) {
-    console.error("Error fetching all products:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-});
+
+    if (products.length === 0) {
+      const error = new Error("Aucun produit trouvé.");
+      error.statusCode = 404;
+      throw error;
+    }
+    res.json(products);
+  }),
+);
 app.post("/upload", upload.single("picture"), async (req, res) => {
   function formatCategory(category) {
     if (!category) return "defaultCategory"; // Si la catégorie n'est pas fournie, utilisez une valeur par défaut
@@ -363,8 +370,11 @@ app.post("/removeproduct", async (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send("Something broke!");
+  console.error(err); // Pour le débogage
+  const statusCode = err.statusCode || 500; // Utilise un statusCode personnalisé si défini, sinon 500
+  const message = err.message || "Une erreur est survenue sur le serveur.";
+
+  res.status(statusCode).json({ message });
 });
 
 app.listen(port, (error) => {

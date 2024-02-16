@@ -27,34 +27,48 @@ function normalizeCategory(category) {
   return mapping[category.toUpperCase()] || category; // Retourne la catégorie normalisée ou la catégorie originale si non trouvée
 }
 
-router.post("/addproduct", upload.single("image"), async (req, res) => {
+router.get("/allproducts", async (req, res) => {
   try {
-    let imageUrl = ""; // Initialisation de la variable pour stocker l'URL de l'image
+    // Paramètres de pagination avec des valeurs par défaut
+    let { page = 1, limit = 10 } = req.query;
 
-    // Si une image est téléchargée, la charger sur Cloudinary
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
-      imageUrl = result.secure_url; // Récupération de l'URL sécurisée de l'image
+    // Conversion des paramètres de pagination en nombres
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // Construction d'un objet de requête pour le filtrage.
+    // Vous pouvez ajouter autant de champs que vous voulez filtrer
+    const query = {};
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+    if (req.query.minPrice) {
+      query.new_price = { $gte: parseFloat(req.query.minPrice) };
+    }
+    if (req.query.maxPrice) {
+      query.new_price = {
+        ...query.new_price,
+        $lte: parseFloat(req.query.maxPrice),
+      };
     }
 
-    const { name, category, new_price, old_price } = req.body;
+    // Trouver les produits correspondant au filtre, paginer les résultats
+    const products = await Product.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-    // Création d'une nouvelle instance du modèle Product
-    const product = new Product({
-      name,
-      image: imageUrl, // Utilisation de l'URL retournée par Cloudinary
-      category: normalizeCategory(category),
-      new_price,
-      old_price,
+    // Compter le total des documents pour le calcul des pages
+    const total = await Product.countDocuments(query);
+
+    res.json({
+      totalProducts: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      products,
     });
-
-    await product.save(); // Sauvegarde du produit dans la base de données
-
-    console.log("Produit ajouté avec succès:", product);
-    res.json({ success: true, product: product });
   } catch (error) {
-    console.error("Erreur lors de l'ajout du produit:", error);
-    res.status(500).send("Internal Server Error");
+    console.error("Error fetching all products:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
 
@@ -99,49 +113,34 @@ router.post("/upload", upload.single("image"), async (req, res) => {
     });
   }
 });
-
-router.get("/allproducts", async (req, res) => {
+router.post("/addproduct", upload.single("image"), async (req, res) => {
   try {
-    // Paramètres de pagination avec des valeurs par défaut
-    let { page = 1, limit = 10 } = req.query;
+    let imageUrl = ""; // Initialisation de la variable pour stocker l'URL de l'image
 
-    // Conversion des paramètres de pagination en nombres
-    page = parseInt(page);
-    limit = parseInt(limit);
-
-    // Construction d'un objet de requête pour le filtrage.
-    // Vous pouvez ajouter autant de champs que vous voulez filtrer
-    const query = {};
-    if (req.query.category) {
-      query.category = req.query.category;
-    }
-    if (req.query.minPrice) {
-      query.new_price = { $gte: parseFloat(req.query.minPrice) };
-    }
-    if (req.query.maxPrice) {
-      query.new_price = {
-        ...query.new_price,
-        $lte: parseFloat(req.query.maxPrice),
-      };
+    // Si une image est téléchargée, la charger sur Cloudinary
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = result.secure_url; // Récupération de l'URL sécurisée de l'image
     }
 
-    // Trouver les produits correspondant au filtre, paginer les résultats
-    const products = await Product.find(query)
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const { name, category, new_price, old_price } = req.body;
 
-    // Compter le total des documents pour le calcul des pages
-    const total = await Product.countDocuments(query);
-
-    res.json({
-      totalProducts: total,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      products,
+    // Création d'une nouvelle instance du modèle Product
+    const product = new Product({
+      name,
+      image: imageUrl, // Utilisation de l'URL retournée par Cloudinary
+      category: normalizeCategory(category),
+      new_price,
+      old_price,
     });
+
+    await product.save(); // Sauvegarde du produit dans la base de données
+
+    console.log("Produit ajouté avec succès:", product);
+    res.json({ success: true, product: product });
   } catch (error) {
-    console.error("Error fetching all products:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("Erreur lors de l'ajout du produit:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
 

@@ -1,11 +1,8 @@
-const express = require("express");
 const fetchuser = require("../middlewares/fetchuser");
 const Product = require("../models/Product");
 const Users = require("../models/User");
 const Sale = require("../models/Sale");
-
-// Importez le modèle Sale
-const router = express.Router();
+const { router } = require("express");
 
 router.post("/recordSale", async (req, res) => {
   try {

@@ -3,6 +3,7 @@ const Product = require("../models/Product");
 //const {cloudinary } = require("../cloudinaryConfig"); // Assurez-vous que ceci est correctement configuré dans cloudinaryConfig.js
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
+const { router } = require("express");
 
 // Configuration de Multer pour le stockage des images téléchargées
 const storage = multer.diskStorage({
@@ -15,9 +16,8 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
-const router = express.Router();
-//const User = require("../models/User");
-//const Sale = require("../models/Sale");
+const Users = require("../models/User");
+const Sale = require("../models/Sale");
 
 function normalizeCategory(category) {
   const mapping = {

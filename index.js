@@ -68,9 +68,9 @@ const productRoutes = require("./routes/products");
 const salesRoutes = require("./routes/sales");
 
 //const Product = require("./models/Product");
-app.use("./users", userRoutes);
-app.use("./products", productRoutes);
-app.use("./sales", salesRoutes);
+app.use("/users", userRoutes);
+app.use("/products", productRoutes);
+app.use("/sales", salesRoutes);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

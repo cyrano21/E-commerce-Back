@@ -218,9 +218,12 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 app.get("/relatedproducts/:productId", async (req, res) => {
   const { productId } = req.params;
 
+  console.log("Fetching related products for:", productId);
+
   try {
     // Tentative de récupérer des produits associés par différentes méthodes
     let associatedProducts = await findProductsBoughtTogether(productId);
+    console.log("Associated products before:", associatedProducts);
 
     if (associatedProducts.length < 8) {
       const productsBySameUsers =
@@ -241,6 +244,7 @@ app.get("/relatedproducts/:productId", async (req, res) => {
         ...associatedProducts,
         ...productsFromSameCategory,
       ].slice(0, 8);
+      console.log("Associated products after:", associatedProducts);
     }
 
     res.json(associatedProducts);

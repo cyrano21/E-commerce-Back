@@ -29,7 +29,7 @@ const { jwtSecret } = require("./config");
 const Joi = require("joi");
 const fetchuser = require("./middlewares/fetchuser");
 
-const { ObjectId } = require("mongoose").Types;
+//const { ObjectId } = require('mongoose').Types;
 
 // Convertit l'ID du produit en ObjectId
 
@@ -49,6 +49,7 @@ const corsOptions = {
   origin: [
     "https://mu-commerce-admin.netlify.app",
     "https://e-commerce-fr.netlify.app",
+    "https://main--e-commerce-fr.netlify.app",
   ],
   credentials: true, // Pour autoriser l'envoi de cookies et d'entêtes d'authentification
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
@@ -245,14 +246,12 @@ app.get("/relatedproducts/:productId", async (req, res) => {
 
   console.log("Fetching related products for:", productId);
 
-  const productIdObjId = new ObjectId(productId);
-
   try {
     // Initialiser le tableau des produits associés
     let associatedProducts = [];
 
     // Première tentative avec les produits achetés ensemble
-    associatedProducts = await findProductsBoughtTogether(productIdObjId);
+    associatedProducts = await findProductsBoughtTogether(productId);
 
     // Si moins de 8 produits trouvés, tenter avec les produits achetés par les mêmes utilisateurs
     if (associatedProducts.length < 8) {
@@ -267,7 +266,7 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     if (associatedProducts.length < 8) {
       const additionalProductsNeeded = 8 - associatedProducts.length;
       const productsFromSameCategory = await findProductsFromSameCategory(
-        productIdObjId,
+        productId,
         additionalProductsNeeded,
       );
       associatedProducts = [

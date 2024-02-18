@@ -17,6 +17,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const Product = require("./models/Product");
+const Sale = require("./models/Sale");
 
 const { cloudinary } = require("./cloudinaryConfig");
 
@@ -87,11 +88,31 @@ async function findProductsFromSameCategory(productId, limit = 8) {
     return await Product.find({
       category: product.category,
       _id: { $ne: productId }, // Exclure le produit d'origine
-    }).limit(limit); // Utiliser le paramètre 'limit' pour contrôler le nombre de résultats
+    }).limit(limit);
   } catch (error) {
     console.error("Error fetching products from the same category:", error);
     return [];
   }
+}
+
+async function findProductsBoughtTogether(productId) {
+  // Exemple hypothétique d'implémentation
+  const salesWithProduct = await Sale.find({ productId });
+  const otherProductIds = salesWithProduct.map((sale) => sale.productId);
+  const otherProducts = await Product.find({ _id: { $in: otherProductIds } });
+  return otherProducts;
+}
+
+async function findProductsBoughtBySameUsers(productId) {
+  const sales = await Sale.find({ productId });
+  const userIds = sales.map((sale) => sale.userId);
+  const otherSales = await Sale.find({
+    userId: { $in: userIds },
+    productId: { $ne: productId },
+  });
+  const otherProductIds = otherSales.map((sale) => sale.productId);
+  const uniqueProductIds = [...new Set(otherProductIds)]; // Enlever les doublons
+  return await Product.find({ _id: { $in: uniqueProductIds } });
 }
 
 app.get("/", (req, res) => res.send("Welcome to the API"));
@@ -221,19 +242,22 @@ app.get("/relatedproducts/:productId", async (req, res) => {
   console.log("Fetching related products for:", productId);
 
   try {
-    // Tentative de récupérer des produits associés par différentes méthodes
-    let associatedProducts = await findProductsBoughtTogether(productId);
-    console.log("Associated products before:", associatedProducts);
+    // Initialiser le tableau des produits associés
+    let associatedProducts = [];
 
+    // Première tentative avec les produits achetés ensemble
+    associatedProducts = await findProductsBoughtTogether(productId);
+
+    // Si moins de 8 produits trouvés, tenter avec les produits achetés par les mêmes utilisateurs
     if (associatedProducts.length < 8) {
       const productsBySameUsers =
         await findProductsBoughtBySameUsers(productId);
       associatedProducts = [
-        ...associatedProducts,
-        ...productsBySameUsers,
+        ...new Set([...associatedProducts, ...productsBySameUsers]),
       ].slice(0, 8);
     }
 
+    // Si toujours moins de 8 produits, compléter avec des produits de la même catégorie
     if (associatedProducts.length < 8) {
       const additionalProductsNeeded = 8 - associatedProducts.length;
       const productsFromSameCategory = await findProductsFromSameCategory(
@@ -241,13 +265,12 @@ app.get("/relatedproducts/:productId", async (req, res) => {
         additionalProductsNeeded,
       );
       associatedProducts = [
-        ...associatedProducts,
-        ...productsFromSameCategory,
+        ...new Set([...associatedProducts, ...productsFromSameCategory]),
       ].slice(0, 8);
-      console.log("Associated products after:", associatedProducts);
     }
 
-    res.json(associatedProducts);
+    console.log("Associated products:", associatedProducts);
+    res.json(associatedProducts); // Renvoyer les produits associés
   } catch (error) {
     console.error("Error fetching related products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });

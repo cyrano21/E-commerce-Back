@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-//const Product = require("./models/Product");
+const Product = require("./models/Product");
 const Sale = require("./models/Sale");
 
 const { cloudinary } = require("./cloudinaryConfig");

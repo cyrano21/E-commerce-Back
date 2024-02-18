@@ -78,6 +78,22 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Trouver des produits de la même catégorie, ajustée pour limiter le nombre de résultats
+async function findProductsFromSameCategory(productId, limit = 8) {
+  try {
+    const product = await Product.findById(productId);
+    if (!product) return [];
+
+    return await Product.find({
+      category: product.category,
+      _id: { $ne: productId }, // Exclure le produit d'origine
+    }).limit(limit); // Utiliser le paramètre 'limit' pour contrôler le nombre de résultats
+  } catch (error) {
+    console.error("Error fetching products from the same category:", error);
+    return [];
+  }
+}
+
 app.get("/", (req, res) => res.send("Welcome to the API"));
 
 //Product routes
@@ -196,6 +212,41 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
   } catch (error) {
     console.error("Erreur lors de l'ajout du produit:", error);
     res.status(500).send("Internal Server Error");
+  }
+});
+
+app.get("/relatedproducts/:productId", async (req, res) => {
+  const { productId } = req.params;
+
+  try {
+    // Tentative de récupérer des produits associés par différentes méthodes
+    let associatedProducts = await findProductsBoughtTogether(productId);
+
+    if (associatedProducts.length < 8) {
+      const productsBySameUsers =
+        await findProductsBoughtBySameUsers(productId);
+      associatedProducts = [
+        ...associatedProducts,
+        ...productsBySameUsers,
+      ].slice(0, 8);
+    }
+
+    if (associatedProducts.length < 8) {
+      const additionalProductsNeeded = 8 - associatedProducts.length;
+      const productsFromSameCategory = await findProductsFromSameCategory(
+        productId,
+        additionalProductsNeeded,
+      );
+      associatedProducts = [
+        ...associatedProducts,
+        ...productsFromSameCategory,
+      ].slice(0, 8);
+    }
+
+    res.json(associatedProducts);
+  } catch (error) {
+    console.error("Error fetching related products:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
 

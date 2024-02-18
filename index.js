@@ -167,6 +167,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     });
   }
 });
+
 app.post("/addproduct", upload.single("image"), async (req, res) => {
   try {
     let imageUrl = ""; // Initialisation de la variable pour stocker l'URL de l'image
@@ -199,10 +200,14 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 });
 
 app.get("/newcollections", async (req, res) => {
-  let products = await Product.find({});
-  let arr = products.slice(1).slice(-8);
-  console.log("New Collections");
-  res.send(arr);
+  try {
+    // Utilisez le modèle Product pour trouver les documents, triés par date de création descendante
+    const products = await Product.find({}).sort({ createdAt: -1 }).limit(16);
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching new collections:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
 });
 
 app.get("/popularproducts", async (req, res) => {

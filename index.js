@@ -199,7 +199,7 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
   }
 });
 
-router.get("/newcollections", async (req, res) => {
+app.get("/newcollections", async (req, res) => {
   try {
     let { page = 1, limit = 16 } = req.query; // Valeurs par défaut
     page = parseInt(page);

@@ -245,11 +245,12 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 app.get("/relatedproducts/:productId", async (req, res) => {
   const { productId } = req.params;
 
-  console.log("Fetching related products for:", productId);
-  const productIdObj = new ObjectId(productId);
+  console.log("ProductId:", productId);
   if (!/^[0-9a-fA-F]{24}$/.test(productId)) {
-    return res.status(400).json({ message: "Invalid product ID format." });
+    console.log("Invalid ObjectId format for productId:", productId);
+    return res.status(400).send("Invalid ID format");
   }
+  const productIdObj = new ObjectId(productId);
 
   try {
     // Initialiser le tableau des produits associés

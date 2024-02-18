@@ -32,6 +32,8 @@ const fetchuser = require("./middlewares/fetchuser");
 //const { ObjectId } = require('mongoose').Types;
 
 // Convertit l'ID du produit en ObjectId
+const { ObjectId } = require("mongoose").Types;
+const productId = req.params.productId;
 
 function normalizeCategory(category) {
   const mapping = {
@@ -245,18 +247,22 @@ app.get("/relatedproducts/:productId", async (req, res) => {
   const { productId } = req.params;
 
   console.log("Fetching related products for:", productId);
+  const productIdObj = new ObjectId(productId);
+  if (!/^[0-9a-fA-F]{24}$/.test(productId)) {
+    return res.status(400).json({ message: "Invalid product ID format." });
+  }
 
   try {
     // Initialiser le tableau des produits associés
     let associatedProducts = [];
 
     // Première tentative avec les produits achetés ensemble
-    associatedProducts = await findProductsBoughtTogether(productId);
+    associatedProducts = await findProductsBoughtTogether(productIdObj);
 
     // Si moins de 8 produits trouvés, tenter avec les produits achetés par les mêmes utilisateurs
     if (associatedProducts.length < 8) {
       const productsBySameUsers =
-        await findProductsBoughtBySameUsers(productId);
+        await findProductsBoughtBySameUsers(productIdObj);
       associatedProducts = [
         ...new Set([...associatedProducts, ...productsBySameUsers]),
       ].slice(0, 8);
@@ -266,7 +272,7 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     if (associatedProducts.length < 8) {
       const additionalProductsNeeded = 8 - associatedProducts.length;
       const productsFromSameCategory = await findProductsFromSameCategory(
-        productId,
+        productIdObj,
         additionalProductsNeeded,
       );
       associatedProducts = [

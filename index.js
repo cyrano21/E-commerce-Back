@@ -33,7 +33,6 @@ const fetchuser = require("./middlewares/fetchuser");
 
 // Convertit l'ID du produit en ObjectId
 const { ObjectId } = require("mongoose").Types;
-const productId = req.params.productId;
 
 function normalizeCategory(category) {
   const mapping = {

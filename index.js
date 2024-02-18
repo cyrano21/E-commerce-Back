@@ -199,14 +199,24 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
   }
 });
 
-app.get("/newcollections", async (req, res) => {
+router.get("/newcollections", async (req, res) => {
   try {
-    // Utilisez le modèle Product pour trouver les documents, triés par date de création descendante
-    const products = await Product.find({}).sort({ createdAt: -1 }).limit(16);
-    res.json(products);
+    let { page = 1, limit = 16 } = req.query; // Valeurs par défaut
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const newCollections = await Product.find({})
+      .sort({ createdAt: -1 }) // Supposons que vous voulez les plus récentes collections en premier
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.json(newCollections);
   } catch (error) {
-    console.error("Error fetching new collections:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error(
+      "Erreur lors de la récupération des nouvelles collections:",
+      error,
+    );
+    res.status(500).json({ message: "Erreur du serveur" });
   }
 });
 

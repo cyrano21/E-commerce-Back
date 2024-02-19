@@ -261,11 +261,12 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     }).limit(8);
 
     // Convertir chaque produit pour la réponse
-    relatedProducts = relatedProducts.map((p) => ({
-      ...p.toObject(), // Transforme le document Mongoose en objet simple
-      _id: p._id.toString(), // Assure que _id est une string
-      // Vous pouvez ajouter ici d'autres transformations si nécessaire
-    }));
+    relatedProducts = relatedProducts.map((p) => {
+      const obj = p.toObject();
+      obj._id = p._id.toString(); // Convertit _id en string
+      obj.customField = "value"; // Ajoute un champ personnalisé si nécessaire
+      return obj;
+    });
 
     res.json(relatedProducts);
   } catch (error) {

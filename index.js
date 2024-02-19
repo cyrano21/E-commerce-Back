@@ -244,9 +244,9 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 
 app.get("/relatedproducts/:productId", async (req, res) => {
   const { productId } = req.params;
+  console.log("productId>>>", productId);
 
   if (!ObjectId.isValid(productId)) {
-    console.log("Invalid ObjectId format for productId:", productId);
     return res.status(400).send("Invalid ID format");
   }
 
@@ -255,29 +255,29 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
+    console.log("Product found:", product);
 
-    // Utiliser la catégorie du produit pour filtrer les produits associés
-    let associatedProducts = await Product.find({
-      _id: { $ne: product._id }, // Exclure le produit actuel
-      category: product.category, // Filtrer par la même catégorie
-    }).limit(8); // Limite arbitraire, ajustez selon les besoins
+    let relatedProducts = await Product.find({
+      category: product.category,
+      _id: { $ne: product._id },
+    }).limit(8);
 
-    // Convertir chaque produit pour la réponse si nécessaire
-    associatedProducts = associatedProducts.map((p) => ({
-      ...p.toObject(),
-      _id: p._id.toString(),
-      // Ajouter d'autres transformations ici si nécessaire
+    // Convertir chaque produit pour la réponse
+    relatedProducts = relatedProducts.map(p => ({
+      ...p.toObject(), // Transforme le document Mongoose en objet simple
+      _id: p._id.toString(), // Assure que _id est une string
+      // Vous pouvez ajouter ici d'autres transformations si nécessaire
     }));
+    console.log("Related products:", relatedProducts);
 
-    console.log("Associated products:", associatedProducts);
-    res.json(associatedProducts);
+    res.json(relatedProducts);
   } catch (error) {
     console.error("Error fetching related products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
-});
 
-app.get("/newcollections", async (req, res) => {
+
+  app.get("/newcollections", async (req, res) => {
   try {
     let { page = 1, limit = 16 } = req.query; // Valeurs par défaut
     page = parseInt(page);

@@ -243,7 +243,7 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 });
 
 app.get("/relatedproducts/:productId", async (req, res) => {
-  const productId = req.params._id;
+  const { productId } = req.params;
 
   if (!ObjectId.isValid(productId)) {
     return res.status(400).send("Invalid ID format");

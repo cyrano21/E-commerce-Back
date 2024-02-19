@@ -244,7 +244,6 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 
 app.get("/relatedproducts/:productId", async (req, res) => {
   const { productId } = req.params;
-  console.log("productId>>>", productId);
 
   if (!ObjectId.isValid(productId)) {
     return res.status(400).send("Invalid ID format");
@@ -255,7 +254,6 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
-    console.log("Product found:", product);
 
     let relatedProducts = await Product.find({
       category: product.category,
@@ -263,21 +261,20 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     }).limit(8);
 
     // Convertir chaque produit pour la réponse
-    relatedProducts = relatedProducts.map(p => ({
+    relatedProducts = relatedProducts.map((p) => ({
       ...p.toObject(), // Transforme le document Mongoose en objet simple
       _id: p._id.toString(), // Assure que _id est une string
       // Vous pouvez ajouter ici d'autres transformations si nécessaire
     }));
-    console.log("Related products:", relatedProducts);
 
     res.json(relatedProducts);
   } catch (error) {
     console.error("Error fetching related products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
+});
 
-
-  app.get("/newcollections", async (req, res) => {
+app.get("/newcollections", async (req, res) => {
   try {
     let { page = 1, limit = 16 } = req.query; // Valeurs par défaut
     page = parseInt(page);

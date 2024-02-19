@@ -245,43 +245,32 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 app.get("/relatedproducts/:productId", async (req, res) => {
   const { productId } = req.params;
 
-  console.log("ProductId:", productId);
-  if (!/^[0-9a-fA-F]{24}$/.test(productId)) {
+  if (!ObjectId.isValid(productId)) {
     console.log("Invalid ObjectId format for productId:", productId);
     return res.status(400).send("Invalid ID format");
   }
-  const productIdObj = new ObjectId(productId);
 
   try {
-    // Initialiser le tableau des produits associés
-    let associatedProducts = [];
-
-    // Première tentative avec les produits achetés ensemble
-    associatedProducts = await findProductsBoughtTogether(productIdObj);
-
-    // Si moins de 8 produits trouvés, tenter avec les produits achetés par les mêmes utilisateurs
-    if (associatedProducts.length < 8) {
-      const productsBySameUsers =
-        await findProductsBoughtBySameUsers(productIdObj);
-      associatedProducts = [
-        ...new Set([...associatedProducts, ...productsBySameUsers]),
-      ].slice(0, 8);
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).send("Product not found");
     }
 
-    // Si toujours moins de 8 produits, compléter avec des produits de la même catégorie
-    if (associatedProducts.length < 8) {
-      const additionalProductsNeeded = 8 - associatedProducts.length;
-      const productsFromSameCategory = await findProductsFromSameCategory(
-        productIdObj,
-        additionalProductsNeeded,
-      );
-      associatedProducts = [
-        ...new Set([...associatedProducts, ...productsFromSameCategory]),
-      ].slice(0, 8);
-    }
+    // Utiliser la catégorie du produit pour filtrer les produits associés
+    let associatedProducts = await Product.find({
+      _id: { $ne: product._id }, // Exclure le produit actuel
+      category: product.category, // Filtrer par la même catégorie
+    }).limit(8); // Limite arbitraire, ajustez selon les besoins
+
+    // Convertir chaque produit pour la réponse si nécessaire
+    associatedProducts = associatedProducts.map((p) => ({
+      ...p.toObject(),
+      _id: p._id.toString(),
+      // Ajouter d'autres transformations ici si nécessaire
+    }));
 
     console.log("Associated products:", associatedProducts);
-    res.json(associatedProducts); // Renvoyer les produits associés
+    res.json(associatedProducts);
   } catch (error) {
     console.error("Error fetching related products:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });

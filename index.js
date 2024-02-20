@@ -127,7 +127,7 @@ app.get("/", (req, res) => res.send("Welcome to the API"));
 app.get("/allproducts", async (req, res) => {
   try {
     // Paramètres de pagination avec des valeurs par défaut
-    let { page = 1, limit = 10, category } = req.query;
+    let { page = 1, limit = 16, category } = req.query;
 
     // Conversion des paramètres de pagination en nombres
     page = parseInt(page, 10);

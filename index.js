@@ -127,21 +127,24 @@ app.get("/", (req, res) => res.send("Welcome to the API"));
 app.get("/allproducts", async (req, res) => {
   try {
     // Paramètres de pagination avec des valeurs par défaut
-    let { page = 1, limit = 10 } = req.query;
+    let { page = 1, limit = 10, category } = req.query;
 
     // Conversion des paramètres de pagination en nombres
-    page = parseInt(page);
-    limit = parseInt(limit);
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
 
-    // Construction d'un objet de requête pour le filtrage.
-    // Vous pouvez ajouter autant de champs que vous voulez filtrer
+    // Préparation de l'objet de requête pour le filtrage
     const query = {};
-    if (req.query.category) {
-      query.category = req.query.category;
+
+    // Appliquer la normalisation de catégorie si une catégorie est spécifiée
+    if (category) {
+      query.category = normalizeCategory(category);
     }
+
     if (req.query.minPrice) {
       query.new_price = { $gte: parseFloat(req.query.minPrice) };
     }
+
     if (req.query.maxPrice) {
       query.new_price = {
         ...query.new_price,

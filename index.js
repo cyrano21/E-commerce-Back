@@ -258,7 +258,7 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     let relatedProducts = await Product.find({
       category: product.category,
       _id: { $ne: product._id },
-    }).limit(8);
+    }).limit(16);
 
     // Convertir chaque produit pour la réponse
     relatedProducts = relatedProducts.map((p) => {

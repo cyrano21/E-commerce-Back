@@ -277,7 +277,7 @@ app.get("/relatedproducts/:productId", async (req, res) => {
 
 app.get("/newcollections", async (req, res) => {
   try {
-    let { page = 1, limit = 16 } = req.query; // Valeurs par défaut
+    let { page = 1, limit = 8 } = req.query; // Valeurs par défaut
     page = parseInt(page);
     limit = parseInt(limit);
 

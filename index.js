@@ -251,6 +251,7 @@ app.get("/products/:productId", async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
+    console.log("Product found:", product);
     res.json(product); // renvoie maintenant les champs supplémentaires comme la description, les tailles, etc.
   } catch (error) {
     console.error("Error fetching product details:", error);

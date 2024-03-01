@@ -3,6 +3,7 @@ require("dotenv").config();
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./db");
+const mongoose = require("mongoose");
 const multer = require("multer");
 const app = express();
 
@@ -29,10 +30,13 @@ const { jwtSecret } = require("./config");
 const Joi = require("joi");
 const fetchuser = require("./middlewares/fetchuser");
 
-//const { ObjectId } = require('mongoose').Types;
-
 // Convertit l'ID du produit en ObjectId
-const { ObjectId } = require("mongoose").Types;
+//const { ObjectId } = require("mongoose").Types;
+
+//if (!ObjectId.isValid(productId)) {
+// return res.status(400).send("Invalid ID format");
+//}
+const ObjectId = mongoose.Types.ObjectId;
 
 function normalizeCategory(category) {
   const mapping = {
@@ -247,22 +251,7 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 });
 
 app.get("/products/:productId", async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.productId);
-    if (!product) {
-      return res.status(404).send("Product not found");
-    }
-    console.log("Product found:", product);
-    res.json(product); // renvoie maintenant les champs supplémentaires comme la description, les tailles, etc.
-  } catch (error) {
-    console.error("Error fetching product details:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-});
-
-app.get("/relatedproducts/:productId", async (req, res) => {
-  const { productId } = req.params;
-
+  const { productId } = req.params; // Extraction de productId depuis les paramètres de la requête
   if (!ObjectId.isValid(productId)) {
     return res.status(400).send("Invalid ID format");
   }
@@ -272,24 +261,44 @@ app.get("/relatedproducts/:productId", async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
+    res.json(product);
+  } catch (error) {
+    console.error("Error fetching product details:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
 
-    let relatedProducts = await Product.find({
-      category: product.category,
-      _id: { $ne: product._id },
-    }).limit(16);
+app.post("/products/details", async (req, res) => {
+  try {
+    // Vérifiez si 'ids' est fourni et est un tableau
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({
+        error: "Invalid request format. 'ids' must be an array of product IDs.",
+      });
+    }
 
-    // Convertir chaque produit pour la réponse
-    relatedProducts = relatedProducts.map((p) => {
-      const obj = p.toObject();
-      obj._id = p._id.toString(); // Convertit _id en string
-      obj.customField = "value"; // Ajoute un champ personnalisé si nécessaire
-      return obj;
+    const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+    if (validIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "No valid MongoDB ObjectId provided." });
+    }
+
+    const products = await Product.find({
+      _id: { $in: validIds },
     });
 
-    res.json(relatedProducts);
+    if (products.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No products found with the provided IDs." });
+    }
+
+    res.json(products);
   } catch (error) {
-    console.error("Error fetching related products:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("Error fetching products details:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -537,8 +546,21 @@ app.post("/removefromcart", fetchuser, async (req, res) => {
 });
 
 app.post("/getcart", fetchuser, async (req, res) => {
-  let userData = await Users.findOne({ _id: req.user.id });
-  res.json(userData.cartData);
+  // L'ID de l'utilisateur devrait être extrait de l'objet req.user ajouté par le middleware fetchuser
+  const userId = req.user.id; // Assurez-vous que votre middleware fetchuser ajoute bien l'ID de l'utilisateur à req.user
+
+  try {
+    // Trouver les données de l'utilisateur basées sur son ID
+    let userData = await Users.findById(userId); // Utiliser findById avec l'ID de l'utilisateur
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    // Renvoyer les données du panier de l'utilisateur
+    res.json(userData.cartData);
+  } catch (error) {
+    console.error("Error fetching cart data:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 app.use((err, req, res, next) => {

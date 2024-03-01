@@ -97,6 +97,44 @@ router.post("/addproduct", upload.single("image"), async (req, res) => {
   res.json({ success: true, product: product });
 });
 
+// À ajouter dans votre fichier de routes, par exemple dans `productRoutes.js`
+
+router.post("/products/details", async (req, res) => {
+  try {
+    const { ids } = req.body; // Récupération des IDs des produits depuis le corps de la requête
+
+    if (!ids || !Array.isArray(ids)) {
+      return res
+        .status(400)
+        .json({ error: "Les IDs doivent être fournis dans un tableau." });
+    }
+
+    // Filtrage pour s'assurer que tous les IDs sont valides
+    const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+    if (validIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Aucun ID de produit valide fourni." });
+    }
+
+    // Recherche des produits correspondants aux IDs
+    const products = await Product.find({ _id: { $in: validIds } });
+    if (products.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Aucun produit trouvé pour les IDs fournis." });
+    }
+
+    res.json(products);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération des détails des produits :",
+      error,
+    );
+    res.status(500).json({ error: "Erreur serveur interne." });
+  }
+});
+
 router.get("/newcollections", async (req, res) => {
   const products = await Product.find({});
   res.send(products.slice(-8));

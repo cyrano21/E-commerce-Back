@@ -6,6 +6,22 @@ const connectDB = require("./db");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const app = express();
+const mcache = require("memory-cache");
+const cache = (duration) => (req, res, next) => {
+  let key = "__express__" + req.originalUrl || req.url;
+  let cachedBody = mcache.get(key);
+  if (cachedBody) {
+    res.send(cachedBody);
+    return;
+  } else {
+    res.sendResponse = res.send;
+    res.send = (body) => {
+      mcache.put(key, body, duration * 1000);
+      res.sendResponse(body);
+    };
+    next();
+  }
+};
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -88,7 +104,15 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limite chaque IP à 100 requêtes par `window` (ici, 15 minutes)
 });
-app.use(limiter);
+
+const createAccountLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 5, // Bloque après 5 requêtes
+  message:
+    "Trop de comptes créés à partir de cette IP, veuillez réessayer après une heure",
+});
+
+app.use("/api/", apiLimiter);
 
 // Trouver des produits de la même catégorie, ajustée pour limiter le nombre de résultats
 async function findProductsFromSameCategory(productId, limit = 8) {
@@ -129,7 +153,7 @@ async function findProductsBoughtBySameUsers(productId) {
 app.get("/", (req, res) => res.send("Welcome to the API"));
 
 //Product routes
-app.get("/allproducts", async (req, res) => {
+app.get("/allproducts", cache(10), async (req, res) => {
   try {
     // Paramètres de pagination avec des valeurs par défaut
     let { page = 1, limit = 16, category } = req.query;

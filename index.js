@@ -561,7 +561,7 @@ app.post("/addtocart", fetchuser, async (req, res) => {
 
     // Recherche si le produit est déjà dans le panier
     const productIndex = user.cartData.findIndex(
-      (item) => item.productId.toString() === productId,
+      (item) => item.productId && item.productId.toString() === productId,
     );
 
     if (productIndex !== -1) {
@@ -612,12 +612,13 @@ app.get("/getcart", fetchuser, async (req, res) => {
     }
     // Transforme les données du panier pour inclure les détails du produit
     const cartData = user.cartData.map((item) => ({
-      _id: item.productId._id,
-      name: item.productId.name,
-      image: item.productId.image,
-      price: item.productId.price,
+      _id: item.productId?._id,
+      name: item.productId?.name,
+      image: item.productId?.image,
+      price: item.productId?.price,
       quantity: item.quantity,
     }));
+
     res.json({ cartData });
   } catch (error) {
     console.error("Error fetching cart data:", error);

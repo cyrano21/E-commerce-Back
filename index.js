@@ -104,6 +104,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limite chaque IP à 100 requêtes par `window` (ici, 15 minutes)
 });
+app.use("/api/", limiter);
 
 const createAccountLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure
@@ -111,8 +112,6 @@ const createAccountLimiter = rateLimit({
   message:
     "Trop de comptes créés à partir de cette IP, veuillez réessayer après une heure",
 });
-
-app.use("/api/", apiLimiter);
 
 // Trouver des produits de la même catégorie, ajustée pour limiter le nombre de résultats
 async function findProductsFromSameCategory(productId, limit = 8) {
@@ -423,7 +422,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/signup", async (req, res) => {
+app.post("/signup", createAccountLimiter, async (req, res) => {
   const userSchema = Joi.object({
     username: Joi.string().alphanum().min(3).max(30).required(),
     email: Joi.string().email().required(),

@@ -548,62 +548,75 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
 });
 
 // Exemple d'ajout de la route au fichier routes/sales.js
-app.post("/addtocart", async (req, res) => {
-  const { userId, productId, quantity } = req.body;
+app.post("/addtocart", fetchuser, async (req, res) => {
+  const userId = req.user.id; // ID de l'utilisateur extrait par le middleware fetchuser
+  const { productId, quantity } = req.body; // ID du produit et quantité envoyée par le client
 
   try {
-    // Recherchez d'abord si le produit est déjà dans le panier
-    let saleItem = await Sale.findOne({ userId, productId, isInCart: true });
-
-    if (saleItem) {
-      // Si l'article est déjà dans le panier, mettez simplement à jour la quantité
-      saleItem.quantity += quantity;
-    } else {
-      // Sinon, créez un nouvel article dans le panier
-      const product = await Product.findById(productId);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      saleItem = new Sale({
-        userId,
-        productId,
-        quantity,
-        price: product.price,
-        isInCart: true,
-      });
+    const user = await Users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    await saleItem.save();
-    res.json({ message: "Added to cart", saleItem });
+    // Recherche si le produit existe déjà dans le panier
+    const productIndex = user.cartData.findIndex(
+      (item) => item.productId.toString() === productId,
+    );
+
+    if (productIndex > -1) {
+      // Le produit existe déjà, mise à jour de la quantité
+      user.cartData[productIndex].quantity += quantity;
+    } else {
+      // Le produit n'existe pas, ajout au panier
+      user.cartData.push({ productId, quantity });
+    }
+
+    await user.save();
+    res.json({ message: "Product added to cart successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error adding to cart" });
+    res.status(500).json({ message: "Error adding product to cart" });
   }
 });
 
 app.post("/removefromcart", fetchuser, async (req, res) => {
-  let userData = await Users.findOne({ _id: req.user.id });
-  if (userData.cartData[req.body.itemId] !== 0)
-    userData.cartData[req.body.itemId] -= 1;
-  await Users.findOneAndUpdate(
-    { _id: req.user.id },
-    { cartData: userData.cartData },
-  );
-  res.json({ message: "Removed" });
-});
-
-app.post("/getcart", fetchuser, async (req, res) => {
-  // L'ID de l'utilisateur devrait être extrait de l'objet req.user ajouté par le middleware fetchuser
-  const userId = req.user.id; // Assurez-vous que votre middleware fetchuser ajoute bien l'ID de l'utilisateur à req.user
+  const userId = req.user.id; // ID de l'utilisateur extrait par le middleware fetchuser
+  const { productId } = req.body; // ID du produit à supprimer
 
   try {
-    // Trouver les données de l'utilisateur basées sur son ID
-    let userData = await Users.findById(userId); // Utiliser findById avec l'ID de l'utilisateur
-    if (!userData) {
+    const user = await Users.findById(userId);
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    // Renvoyer les données du panier de l'utilisateur
-    res.json(userData.cartData);
+
+    // Filtrer cartData pour exclure le produit à supprimer
+    user.cartData = user.cartData.filter(
+      (item) => item.productId.toString() !== productId,
+    );
+
+    await user.save();
+    res.json({ message: "Product removed from cart successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error removing product from cart" });
+  }
+});
+
+app.get("/getcart", fetchuser, async (req, res) => {
+  const userId = req.user.id; // Utilisez fetchuser pour obtenir l'ID de l'utilisateur
+  try {
+    const user = await Users.findById(userId).populate("cartData.productId");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const cartData = user.cartData.map((item) => ({
+      _id: item.productId._id,
+      name: item.productId.name,
+      image: item.productId.image,
+      price: item.productId.price,
+      quantity: item.quantity,
+    }));
+    res.json({ cartData });
   } catch (error) {
     console.error("Error fetching cart data:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -640,25 +653,62 @@ app.post("/checkout", async (req, res) => {
 });
 
 app.post("/decreaseQuantity", fetchuser, async (req, res) => {
-  const userId = req.user.id;
-  const { productId } = req.body;
+  const userId = req.user.id; // ID de l'utilisateur obtenu du middleware d'authentification
+  const { productId } = req.body; // ID du produit à diminuer dans le panier
 
   try {
+    // Recherche de l'article dans le panier de l'utilisateur
     const cartItem = await Sale.findOne({ userId, productId, isInCart: true });
     if (!cartItem) {
-      return res.status(404).json({ message: "Product not found in cart" });
+      return res.status(404).json({ message: "Item not found in cart" });
     }
 
+    // Diminuer la quantité ou supprimer l'article si la quantité atteint 0
     if (cartItem.quantity > 1) {
       cartItem.quantity -= 1;
       await cartItem.save();
     } else {
+      // Optionnel: supprimer l'article ou laisser la quantité à 0
       await Sale.deleteOne({ _id: cartItem._id });
     }
 
-    res.json({ message: "Product quantity decreased successfully." });
+    res.json({ message: "Quantity decreased", cartItem });
   } catch (error) {
-    console.error("Error decreasing product quantity: ", error);
+    console.error(error);
+    res.status(500).json({ message: "Error updating cart" });
+  }
+});
+
+app.post("/updateQuantity", fetchuser, async (req, res) => {
+  const userId = req.user.id;
+  const { productId, quantity } = req.body;
+
+  try {
+    const user = await Users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const productIndex = user.cartData.findIndex(
+      (item) => item.productId.toString() === productId,
+    );
+
+    if (productIndex > -1) {
+      // Le produit existe, mise à jour de la quantité
+      if (quantity <= 0) {
+        // Si la quantité est inférieure ou égale à 0, supprimer le produit du panier
+        user.cartData.splice(productIndex, 1);
+      } else {
+        user.cartData[productIndex].quantity = quantity;
+      }
+
+      await user.save();
+      res.json({ message: "Cart updated successfully" });
+    } else {
+      return res.status(404).json({ message: "Product not found in cart" });
+    }
+  } catch (error) {
+    console.error("Error updating product quantity in cart: ", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

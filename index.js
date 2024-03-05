@@ -639,7 +639,7 @@ app.post("/checkout", async (req, res) => {
   }
 });
 
-router.post("/decreaseQuantity", fetchuser, async (req, res) => {
+app.post("/decreaseQuantity", fetchuser, async (req, res) => {
   const userId = req.user.id;
   const { productId } = req.body;
 

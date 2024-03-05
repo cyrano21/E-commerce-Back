@@ -548,9 +548,10 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
 });
 
 // Exemple d'ajout de la route au fichier routes/sales.js
+// Exemple: Ajout d'un produit au panier
 app.post("/addtocart", fetchuser, async (req, res) => {
-  const userId = req.user.id; // ID de l'utilisateur extrait par le middleware fetchuser
-  const { productId, quantity } = req.body; // ID du produit et quantité envoyée par le client
+  const userId = req.user.id;
+  const { productId, quantity } = req.body;
 
   try {
     const user = await Users.findById(userId);
@@ -558,24 +559,24 @@ app.post("/addtocart", fetchuser, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Recherche si le produit existe déjà dans le panier
+    // Recherche si le produit est déjà dans le panier
     const productIndex = user.cartData.findIndex(
       (item) => item.productId.toString() === productId,
     );
 
-    if (productIndex > -1) {
-      // Le produit existe déjà, mise à jour de la quantité
+    if (productIndex !== -1) {
+      // Produit déjà dans le panier, mise à jour de la quantité
       user.cartData[productIndex].quantity += quantity;
     } else {
-      // Le produit n'existe pas, ajout au panier
+      // Nouveau produit, ajout au panier
       user.cartData.push({ productId, quantity });
     }
 
     await user.save();
     res.json({ message: "Product added to cart successfully" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error adding product to cart" });
+    console.error("Error adding product to cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
@@ -603,12 +604,13 @@ app.post("/removefromcart", fetchuser, async (req, res) => {
 });
 
 app.get("/getcart", fetchuser, async (req, res) => {
-  const userId = req.user.id; // Utilisez fetchuser pour obtenir l'ID de l'utilisateur
+  const userId = req.user.id;
   try {
     const user = await Users.findById(userId).populate("cartData.productId");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    // Transforme les données du panier pour inclure les détails du produit
     const cartData = user.cartData.map((item) => ({
       _id: item.productId._id,
       name: item.productId.name,

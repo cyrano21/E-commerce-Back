@@ -1,20 +1,20 @@
 const jwt = require("jsonwebtoken");
 
 const fetchuser = (req, res, next) => {
-  // Récupérer le token du header de la requête
-  const token = req.header("auth-token");
+  const token = req.header("Authorization").replace("Bearer ", "");
   if (!token) {
     return res
       .status(401)
-      .send({ error: "Veuillez vous authentifier avec un token valide." });
+      .send({ error: "Please authenticate using a valid token" });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded.user; // Ajouter l'utilisateur au requête pour un accès dans les routes suivantes
+    const data = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = data.user;
     next();
   } catch (error) {
-    res.status(401).send({ error: "Token invalide." });
+    res.status(401).send({ error: "Please authenticate using a valid token" });
   }
 };
+
 module.exports = fetchuser;

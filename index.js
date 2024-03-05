@@ -547,14 +547,38 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
   res.json({ success: true, message: "Purchase completed successfully." });
 });
 
-app.post("/addtocart", fetchuser, async (req, res) => {
-  let userData = await Users.findOne({ _id: req.user.id });
-  userData.cartData[req.body.itemId] += 1;
-  await Users.findOneAndUpdate(
-    { _id: req.user.id },
-    { cartData: userData.cartData },
-  );
-  res.json({ message: "Added" });
+// Exemple d'ajout de la route au fichier routes/sales.js
+app.post("/addtocart", async (req, res) => {
+  const { userId, productId, quantity } = req.body;
+
+  try {
+    // Recherchez d'abord si le produit est déjà dans le panier
+    let saleItem = await Sale.findOne({ userId, productId, isInCart: true });
+
+    if (saleItem) {
+      // Si l'article est déjà dans le panier, mettez simplement à jour la quantité
+      saleItem.quantity += quantity;
+    } else {
+      // Sinon, créez un nouvel article dans le panier
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      saleItem = new Sale({
+        userId,
+        productId,
+        quantity,
+        price: product.price,
+        isInCart: true,
+      });
+    }
+
+    await saleItem.save();
+    res.json({ message: "Added to cart", saleItem });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error adding to cart" });
+  }
 });
 
 app.post("/removefromcart", fetchuser, async (req, res) => {
@@ -583,6 +607,59 @@ app.post("/getcart", fetchuser, async (req, res) => {
   } catch (error) {
     console.error("Error fetching cart data:", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+app.get("/cart/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const cartItems = await Sale.find({ userId, isInCart: true }).populate(
+      "productId",
+    );
+    res.json(cartItems);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching cart items" });
+  }
+});
+
+app.post("/checkout", async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    await Sale.updateMany(
+      { userId, isInCart: true },
+      { $set: { isInCart: false } },
+    );
+    res.json({ message: "Checkout successful" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error during checkout" });
+  }
+});
+
+router.post("/decreaseQuantity", fetchuser, async (req, res) => {
+  const userId = req.user.id;
+  const { productId } = req.body;
+
+  try {
+    const cartItem = await Sale.findOne({ userId, productId, isInCart: true });
+    if (!cartItem) {
+      return res.status(404).json({ message: "Product not found in cart" });
+    }
+
+    if (cartItem.quantity > 1) {
+      cartItem.quantity -= 1;
+      await cartItem.save();
+    } else {
+      await Sale.deleteOne({ _id: cartItem._id });
+    }
+
+    res.json({ message: "Product quantity decreased successfully." });
+  } catch (error) {
+    console.error("Error decreasing product quantity: ", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

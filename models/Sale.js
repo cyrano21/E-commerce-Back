@@ -14,8 +14,7 @@ const saleSchema = new mongoose.Schema({
   quantity: Number,
   price: Number,
   date: { type: Date, default: Date.now },
-  timesPurchased: { type: Number, default: 0 },
-  stock: { type: Number, default: 0 }, // Si vous souhaitez suivre le stock
+  isInCart: { type: Boolean, default: true }, // Ajouté pour distinguer les articles dans le panier
 });
 
 const Sale = mongoose.model("Sale", saleSchema);

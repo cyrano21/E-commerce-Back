@@ -200,6 +200,16 @@ app.get("/allproducts", cache(10), async (req, res) => {
   }
 });
 
+app.get("/products", async (req, res) => {
+  try {
+    const products = await Product.find({});
+    res.json(products);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des produits:", error);
+    res.status(500).send("Erreur interne du serveur");
+  }
+});
+
 app.post("/upload", upload.single("image"), async (req, res) => {
   function formatCategory(category) {
     if (!category) return "defaultCategory"; // Si la catégorie n'est pas fournie, utilisez une valeur par défaut
@@ -547,40 +557,43 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
   res.json({ success: true, message: "Purchase completed successfully." });
 });
 
-// Exemple d'ajout de la route au fichier routes/sales.js
-// Exemple: Ajout d'un produit au panier
-app.post("/addtocart", fetchuser, async (req, res) => {
-  const userId = req.user.id;
+app.post("/addtocart", async (req, res) => {
+  // Tentative de récupération de l'ID de l'utilisateur si connecté
+  const userId = req.user ? req.user.id : null;
   const { productId, quantity } = req.body;
 
   if (!quantity || quantity < 1) {
     return res.status(400).json({ error: "Invalid or missing quantity" });
   }
 
-  try {
-    const user = await Users.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+  // Si l'utilisateur est connecté, utilisez la logique existante pour mettre à jour le panier dans la base de données
+  if (userId) {
+    try {
+      const user = await Users.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const productIndex = user.cartData.findIndex(
+        (item) => item.productId.toString() === productId,
+      );
+
+      if (productIndex !== -1) {
+        user.cartData[productIndex].quantity += quantity;
+      } else {
+        user.cartData.push({ productId, quantity });
+      }
+
+      await user.save();
+      return res.json({ success: true, message: "Product added to cart" });
+    } catch (error) {
+      console.error("Error adding product to cart:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
-
-    // Recherche si le produit est déjà dans le panier
-    const productIndex = user.cartData.findIndex(
-      (item) => item.productId && item.productId.toString() === productId,
-    );
-
-    if (productIndex !== -1) {
-      // Produit déjà dans le panier, mise à jour de la quantité
-      user.cartData[productIndex].quantity += quantity;
-    } else {
-      // Nouveau produit, ajout au panier
-      user.cartData.push({ productId, quantity });
-    }
-
-    await user.save();
-    res.json({ success: true, message: "Product added to cart" });
-  } catch (error) {
-    console.error("Error adding product to cart:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+  } else {
+    // Si l'utilisateur n'est pas connecté, vous pouvez choisir de ne pas traiter le panier ici
+    // et de gérer l'ajout au panier côté client avec localStorage par exemple
+    return res.status(403).json({ error: "User not authenticated" });
   }
 });
 

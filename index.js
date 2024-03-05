@@ -553,10 +553,14 @@ app.post("/addtocart", fetchuser, async (req, res) => {
   const userId = req.user.id;
   const { productId, quantity } = req.body;
 
+  if (!quantity || quantity < 1) {
+    return res.status(400).json({ error: "Invalid or missing quantity" });
+  }
+
   try {
     const user = await Users.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Recherche si le produit est déjà dans le panier
@@ -573,10 +577,10 @@ app.post("/addtocart", fetchuser, async (req, res) => {
     }
 
     await user.save();
-    res.json({ message: "Product added to cart successfully" });
+    res.json({ success: true, message: "Product added to cart" });
   } catch (error) {
     console.error("Error adding product to cart:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

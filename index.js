@@ -558,20 +558,25 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
 });
 
 app.post("/addtocart", async (req, res) => {
-  // Tentative de récupération de l'ID de l'utilisateur si connecté
-  const userId = req.user ? req.user.id : null;
   const { productId, quantity } = req.body;
 
   if (!quantity || quantity < 1) {
-    return res.status(400).json({ error: "Invalid or missing quantity" });
+    return res.status(400).json({ error: "Quantité invalide" });
   }
 
-  // Si l'utilisateur est connecté, utilisez la logique existante pour mettre à jour le panier dans la base de données
-  if (userId) {
+  // Vérifiez si l'utilisateur est authentifié (par exemple, via un token JWT)
+  if (req.user) {
     try {
-      const user = await Users.findById(userId);
+      // L'utilisateur est authentifié; procédez à la mise à jour du panier dans la base de données
+      const user = await Users.findById(req.user.id);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      if (!req.user) {
+        return res.json({
+          success: true,
+          message: "Ajout au panier côté client",
+        });
       }
 
       const productIndex = user.cartData.findIndex(
@@ -585,14 +590,12 @@ app.post("/addtocart", async (req, res) => {
       }
 
       await user.save();
-      return res.json({ success: true, message: "Product added to cart" });
+      res.json({ success: true, message: "Produit ajouté au panier" });
     } catch (error) {
-      console.error("Error adding product to cart:", error);
-      return res.status(500).json({ error: "Internal Server Error" });
+      console.error(error);
+      res.status(500).json({ error: "Erreur du serveur" });
     }
   } else {
-    // Si l'utilisateur n'est pas connecté, vous pouvez choisir de ne pas traiter le panier ici
-    // et de gérer l'ajout au panier côté client avec localStorage par exemple
     return res.status(403).json({ error: "User not authenticated" });
   }
 });
@@ -620,12 +623,14 @@ app.post("/removefromcart", fetchuser, async (req, res) => {
   }
 });
 
+// route pour obtenir le panier
 app.get("/getcart", fetchuser, async (req, res) => {
   const userId = req.user.id;
+  console.log("userId", userId);
   try {
     const user = await Users.findById(userId).populate("cartData.productId");
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
     // Transforme les données du panier pour inclure les détails du produit
     const cartData = user.cartData.map((item) => ({
@@ -638,8 +643,11 @@ app.get("/getcart", fetchuser, async (req, res) => {
 
     res.json({ cartData });
   } catch (error) {
-    console.error("Error fetching cart data:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error(
+      "Erreur lors de la récupération des données du panier :",
+      error,
+    );
+    res.status(500).json({ message: "Erreur interne du serveur" });
   }
 });
 

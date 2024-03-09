@@ -6,6 +6,10 @@ const connectDB = require("./db");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const app = express();
+
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
+
 const mcache = require("memory-cache");
 const cache = (duration) => (req, res, next) => {
   let key = "__express__" + req.originalUrl || req.url;
@@ -46,6 +50,20 @@ const { jwtSecret } = require("./config");
 const Joi = require("joi");
 const fetchuser = require("./middlewares/fetchuser");
 
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGOOSE_URL,
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 jours pour l'exemple
+    },
+  }),
+);
 // Convertit l'ID du produit en ObjectId
 //const { ObjectId } = require("mongoose").Types;
 
@@ -557,47 +575,31 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
   res.json({ success: true, message: "Purchase completed successfully." });
 });
 
-app.post("/addtocart", async (req, res) => {
+app.post("/addtocart", (req, res) => {
   const { productId, quantity } = req.body;
 
   if (!quantity || quantity < 1) {
     return res.status(400).json({ error: "Quantité invalide" });
   }
 
-  // Vérifiez si l'utilisateur est authentifié (par exemple, via un token JWT)
-  if (req.user) {
-    try {
-      // L'utilisateur est authentifié; procédez à la mise à jour du panier dans la base de données
-      const user = await Users.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ error: "Utilisateur non trouvé" });
-      }
-      if (!req.user) {
-        return res.json({
-          success: true,
-          message: "Ajout au panier côté client",
-        });
-      }
-
-      const productIndex = user.cartData.findIndex(
-        (item) => item.productId.toString() === productId,
-      );
-
-      if (productIndex !== -1) {
-        user.cartData[productIndex].quantity += quantity;
-      } else {
-        user.cartData.push({ productId, quantity });
-      }
-
-      await user.save();
-      res.json({ success: true, message: "Produit ajouté au panier" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Erreur du serveur" });
-    }
-  } else {
-    return res.status(403).json({ error: "User not authenticated" });
+  // Initialiser le panier dans la session s'il n'existe pas
+  if (!req.session.cart) {
+    req.session.cart = [];
   }
+
+  // Ajouter ou mettre à jour le produit dans le panier de session
+  const productIndex = req.session.cart.findIndex(
+    (item) => item.productId === productId,
+  );
+  if (productIndex > -1) {
+    // Le produit existe déjà dans le panier, mettre à jour la quantité
+    req.session.cart[productIndex].quantity += quantity;
+  } else {
+    // Le produit n'existe pas, l'ajouter au panier
+    req.session.cart.push({ productId, quantity });
+  }
+
+  res.json({ success: true, message: "Produit ajouté au panier avec succès" });
 });
 
 app.post("/removefromcart", fetchuser, async (req, res) => {
@@ -743,7 +745,11 @@ app.post("/updateQuantity", fetchuser, async (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Something broke!");
+  res.status(500).send({
+    success: false,
+    message: "Erreur interne du serveur",
+    error: err.message,
+  });
 });
 
 const port = process.env.PORT || 8080;

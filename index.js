@@ -7,6 +7,10 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const app = express();
 
+const bodyParser = require("body-parser");
+const { sendEmail } = require("./mailgunService");
+app.use(bodyParser.json());
+
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
@@ -64,12 +68,7 @@ app.use(
     },
   }),
 );
-// Convertit l'ID du produit en ObjectId
-//const { ObjectId } = require("mongoose").Types;
 
-//if (!ObjectId.isValid(productId)) {
-// return res.status(400).send("Invalid ID format");
-//}
 const ObjectId = mongoose.Types.ObjectId;
 
 function normalizeCategory(category) {
@@ -741,6 +740,19 @@ app.post("/updateQuantity", fetchuser, async (req, res) => {
     console.error("Error updating product quantity in cart: ", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+app.post("/send", (req, res) => {
+  // Extraction des données du formulaire
+  const { email, name, message } = req.body;
+  const subject = `Message from ${name}`;
+
+  // Utilisation de la fonction sendEmail de votre module mailgunService
+  sendEmail(email, subject, message)
+    .then(() => res.json({ message: "Email sent successfully!" }))
+    .catch((error) =>
+      res.status(500).json({ error: "Failed to send email", details: error }),
+    );
 });
 
 app.use((err, req, res, next) => {

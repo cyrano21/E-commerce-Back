@@ -44,7 +44,7 @@ const upload = multer({ storage: storage });
 const Product = require("./models/Product");
 const Sale = require("./models/Sale");
 
-const { cloudinary } = require("./cloudinaryConfig");
+const cloudinary = require("./cloudinaryConfig");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");

@@ -271,7 +271,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   }
 });
 
-router.post("/addproduct", upload.single("image"), async (req, res) => {
+app.post("/addproduct", upload.single("image"), async (req, res) => {
   const { name, category, new_price, old_price, description, sizes, tags } =
     req.body;
   const result = await cloudinary.uploader.upload(req.file.path);

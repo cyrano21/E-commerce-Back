@@ -391,21 +391,26 @@ app.get("/popularproducts", async (req, res) => {
   }
 });
 
-app.post("/removeproduct", async (req, res) => {
-  try {
-    const { _id } = req.body;
+app.post("/removefromcart", fetchuser, async (req, res) => {
+  const userId = req.user.id; // ID de l'utilisateur extrait par le middleware fetchuser
+  const { productId } = req.body; // ID du produit à supprimer
 
-    const product = await Product.findOneAndDelete({ _id: _id });
-    if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
+  try {
+    const user = await Users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-    console.log("Removed:", product.name);
-    res.json({ success: true, name: product.name });
+
+    // Filtrer cartData pour exclure le produit à supprimer
+    user.cartData = user.cartData.filter(
+      (item) => item.productId.toString() !== productId
+    );
+
+    await user.save();
+    res.json({ message: "Product removed from cart successfully" });
   } catch (error) {
-    console.error("Error removing product:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error(error);
+    res.status(500).json({ message: "Error removing product from cart" });
   }
 });
 

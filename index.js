@@ -31,6 +31,7 @@ const cache = (duration) => (req, res, next) => {
   }
 };
 
+// Multer configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -39,7 +40,6 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + "-" + file.originalname);
   },
 });
-
 const upload = multer({ storage: storage });
 
 const Product = require("./models/Product");
@@ -47,6 +47,11 @@ const Sale = require("./models/Sale");
 const fs = require("fs");
 
 const cloudinary = require("./cloudinaryConfig");
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -294,10 +299,15 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
     req.body;
 
   try {
-    // Créer un nouveau produit
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "E-commerce/Category/Women",
+    });
+
+    // Create a new product with the secure_url from Cloudinary
     const newProduct = new Product({
       name,
-      image: req.file.path, // Utilisez l'URL de votre service de stockage si nécessaire
+      image: result.secure_url, // Using the secure URL from Cloudinary
       category,
       description,
       sizes,
@@ -308,7 +318,7 @@ app.post("/addproduct", upload.single("image"), async (req, res) => {
 
     await newProduct.save();
 
-    // Optionnel: supprimer le fichier après l'enregistrement
+    // Optionally: delete the file after saving
     fs.unlinkSync(req.file.path);
 
     res.status(201).json({ success: true, product: newProduct });

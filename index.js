@@ -66,7 +66,7 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 jours pour l'exemple
     },
-  }),
+  })
 );
 
 const ObjectId = mongoose.Types.ObjectId;
@@ -100,7 +100,8 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*"); // ou une origine spécifique
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   next();
@@ -367,7 +368,8 @@ app.get("/newcollections", async (req, res) => {
   } catch (error) {
     console.error(
       "Erreur lors de la récupération des nouvelles collections:",
-      error,
+
+      error
     );
     res.status(500).json({ message: "Erreur du serveur" });
   }
@@ -385,7 +387,8 @@ app.get("/popularproducts", async (req, res) => {
   } catch (error) {
     console.error(
       "Erreur lors de la récupération des produits populaires:",
-      error,
+
+      error
     );
     res.status(500).send({ error: "Erreur interne du serveur" });
   }
@@ -573,7 +576,7 @@ app.post("/completepurchase", fetchuser, async (req, res) => {
       product.stock -= quantity;
       await product.save();
       await newSale.save();
-    }),
+    })
   );
 
   res.json({ success: true, message: "Purchase completed successfully." });
@@ -593,7 +596,7 @@ app.post("/addtocart", (req, res) => {
 
   // Ajouter ou mettre à jour le produit dans le panier de session
   const productIndex = req.session.cart.findIndex(
-    (item) => item.productId === productId,
+    (item) => item.productId === productId
   );
   if (productIndex > -1) {
     // Le produit existe déjà dans le panier, mettre à jour la quantité
@@ -618,7 +621,7 @@ app.post("/removefromcart", fetchuser, async (req, res) => {
 
     // Filtrer cartData pour exclure le produit à supprimer
     user.cartData = user.cartData.filter(
-      (item) => item.productId.toString() !== productId,
+      (item) => item.productId.toString() !== productId
     );
 
     await user.save();
@@ -651,7 +654,8 @@ app.get("/getcart", fetchuser, async (req, res) => {
   } catch (error) {
     console.error(
       "Erreur lors de la récupération des données du panier :",
-      error,
+
+      error
     );
     res.status(500).json({ message: "Erreur interne du serveur" });
   }
@@ -662,7 +666,7 @@ app.get("/cart/:userId", async (req, res) => {
 
   try {
     const cartItems = await Sale.find({ userId, isInCart: true }).populate(
-      "productId",
+      "productId"
     );
     res.json(cartItems);
   } catch (error) {
@@ -677,7 +681,8 @@ app.post("/checkout", async (req, res) => {
   try {
     await Sale.updateMany(
       { userId, isInCart: true },
-      { $set: { isInCart: false } },
+
+      { $set: { isInCart: false } }
     );
     res.json({ message: "Checkout successful" });
   } catch (error) {
@@ -724,7 +729,7 @@ app.post("/updateQuantity", fetchuser, async (req, res) => {
     }
 
     const productIndex = user.cartData.findIndex(
-      (item) => item.productId.toString() === productId,
+      (item) => item.productId.toString() === productId
     );
 
     if (productIndex > -1) {
@@ -756,7 +761,7 @@ app.post("/send", (req, res) => {
   sendEmail(email, subject, message)
     .then(() => res.json({ message: "Email sent successfully!" }))
     .catch((error) =>
-      res.status(500).json({ error: "Failed to send email", details: error }),
+      res.status(500).json({ error: "Failed to send email", details: error })
     );
 });
 

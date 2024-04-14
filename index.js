@@ -85,14 +85,20 @@ app.set("trust proxy", 1);
 
 const corsOptions = {
   origin: [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://mu-commerce-admin.netlify.app",
+    "http://localhost:3000", // URL de développement local du front-end
+    "http://localhost:5173", // Autre URL de développement local potentiel
+    "https://mu-commerce-admin.netlify.app", // URL de production
     "https://e-commerce-fr.netlify.app",
     "https://main--e-commerce-fr.netlify.app",
   ],
-  credentials: true, // Pour autoriser l'envoi de cookies et d'entêtes d'authentification
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true, // Permet d'envoyer des cookies et des en-têtes d'authentification
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Ajouter toutes les méthodes nécessaires
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+  ], // S'assurer que tous les en-têtes nécessaires sont permis
 };
 
 app.use(cors(corsOptions));
@@ -241,7 +247,10 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   category = formatCategory(category);
   const folder = `E-commerce/Category/${category}`;
 
+  console.log("Folder:", folder); // Journalisation de la catégorie du dossier
+
   if (!req.file) {
+    console.log("Aucun fichier n'a été téléchargé."); // Journalisation si aucun fichier n'est téléchargé
     return res.status(400).json({
       success: false,
       message: "Aucun fichier n'a été téléchargé.",
@@ -254,7 +263,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     const result = await cloudinary.uploader.upload(file.path, {
       folder: folder,
     });
-    // Fonction pour formater la catégorie avec la première lettre en majuscule
+    console.log("Résultat du téléchargement sur Cloudinary:", result); // Journalisation du résultat du téléchargement
 
     res.json({
       success: true,
@@ -271,32 +280,38 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   }
 });
 
-app.post("/addproduct", upload.single("image"), async (req, res) => {
-  const { name, category, new_price, old_price, description, sizes, tags } =
-    req.body;
-  const result = await cloudinary.uploader.upload(req.file.path);
+app.post(
+  "/addproduct",
+  cors(corsOptions),
+  upload.single("image"),
+  async (req, res) => {
+    const { name, category, new_price, old_price, description, sizes, tags } =
+      req.body;
 
-  const newProduct = new Product({
-    name,
-    image: result.secure_url,
-    category,
-    description,
-    sizes,
-    tags,
-    new_price,
-    old_price,
-  });
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path);
 
-  try {
-    await newProduct.save();
-    // Supprimer le fichier après l'upload
-    fs.unlinkSync(req.file.path);
-    res.json({ success: true, product: newProduct });
-  } catch (error) {
-    console.error("Erreur lors de l'ajout du produit:", error);
-    res.status(500).send("Internal Server Error");
+      const newProduct = new Product({
+        name,
+        image: result.secure_url,
+        category,
+        description,
+        sizes,
+        tags,
+        new_price,
+        old_price,
+      });
+
+      await newProduct.save();
+      // Supprimer le fichier après l'upload
+      fs.unlinkSync(req.file.path);
+      res.json({ success: true, product: newProduct });
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du produit:", error);
+      res.status(500).send("Internal Server Error");
+    }
   }
-});
+);
 
 app.get("/products/:productId", async (req, res) => {
   const { productId } = req.params; // Extraction de productId depuis les paramètres de la requête

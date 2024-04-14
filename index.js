@@ -85,6 +85,7 @@ app.set("trust proxy", 1);
 
 const corsOptions = {
   origin: [
+    " http://localhost:3001",
     "http://localhost:3000", // URL de développement local du front-end
     "http://localhost:5173", // Autre URL de développement local potentiel
     "https://mu-commerce-admin.netlify.app", // URL de production

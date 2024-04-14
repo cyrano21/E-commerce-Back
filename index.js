@@ -85,6 +85,7 @@ app.set("trust proxy", 1);
 
 const corsOptions = {
   origin: [
+    "http://localhost:3000",
     "http://localhost:5173",
     "https://mu-commerce-admin.netlify.app",
     "https://e-commerce-fr.netlify.app",
@@ -270,31 +271,27 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   }
 });
 
-app.post("/addproduct", upload.single("image"), async (req, res) => {
+router.post("/addproduct", upload.single("image"), async (req, res) => {
+  const { name, category, new_price, old_price, description, sizes, tags } =
+    req.body;
+  const result = await cloudinary.uploader.upload(req.file.path);
+
+  const newProduct = new Product({
+    name,
+    image: result.secure_url,
+    category,
+    description,
+    sizes,
+    tags,
+    new_price,
+    old_price,
+  });
+
   try {
-    let imageUrl = ""; // Initialisation de la variable pour stocker l'URL de l'image
-
-    // Si une image est téléchargée, la charger sur Cloudinary
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
-      imageUrl = result.secure_url; // Récupération de l'URL sécurisée de l'image
-    }
-
-    const { name, category, new_price, old_price } = req.body;
-
-    // Création d'une nouvelle instance du modèle Product
-    const product = new Product({
-      name,
-      image: imageUrl, // Utilisation de l'URL retournée par Cloudinary
-      category: normalizeCategory(category),
-      new_price,
-      old_price,
-    });
-
-    await product.save(); // Sauvegarde du produit dans la base de données
-
-    console.log("Produit ajouté avec succès:", product);
-    res.json({ success: true, product: product });
+    await newProduct.save();
+    // Supprimer le fichier après l'upload
+    fs.unlinkSync(req.file.path);
+    res.json({ success: true, product: newProduct });
   } catch (error) {
     console.error("Erreur lors de l'ajout du produit:", error);
     res.status(500).send("Internal Server Error");

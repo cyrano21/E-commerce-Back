@@ -33,16 +33,18 @@ const cache = (duration) => (req, res, next) => {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/"); // Chemin du dossier où les images seront sauvegardées temporairement
+    cb(null, "uploads/");
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname); // Nom du fichier pour éviter les conflits
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
+
 const upload = multer({ storage: storage });
 
 const Product = require("./models/Product");
 const Sale = require("./models/Sale");
+const fs = require("fs");
 
 const cloudinary = require("./cloudinaryConfig");
 
@@ -281,38 +283,40 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   }
 });
 
-app.post(
-  "/addproduct",
-  cors(corsOptions),
-  upload.single("image"),
-  async (req, res) => {
-    const { name, category, new_price, old_price, description, sizes, tags } =
-      req.body;
-
-    try {
-      const result = await cloudinary.uploader.upload(req.file.path);
-
-      const newProduct = new Product({
-        name,
-        image: result.secure_url,
-        category,
-        description,
-        sizes,
-        tags,
-        new_price,
-        old_price,
-      });
-
-      await newProduct.save();
-      // Supprimer le fichier après l'upload
-      fs.unlinkSync(req.file.path);
-      res.json({ success: true, product: newProduct });
-    } catch (error) {
-      console.error("Erreur lors de l'ajout du produit:", error);
-      res.status(500).send("Internal Server Error");
-    }
+app.post("/addproduct", upload.single("image"), async (req, res) => {
+  if (!req.file) {
+    return res
+      .status(400)
+      .json({ success: false, message: "No file uploaded" });
   }
-);
+
+  const { name, category, new_price, old_price, description, sizes, tags } =
+    req.body;
+
+  try {
+    // Créer un nouveau produit
+    const newProduct = new Product({
+      name,
+      image: req.file.path, // Utilisez l'URL de votre service de stockage si nécessaire
+      category,
+      description,
+      sizes,
+      tags,
+      new_price,
+      old_price,
+    });
+
+    await newProduct.save();
+
+    // Optionnel: supprimer le fichier après l'enregistrement
+    fs.unlinkSync(req.file.path);
+
+    res.status(201).json({ success: true, product: newProduct });
+  } catch (error) {
+    console.error("Error adding product:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
 
 app.get("/products/:productId", async (req, res) => {
   const { productId } = req.params; // Extraction de productId depuis les paramètres de la requête
